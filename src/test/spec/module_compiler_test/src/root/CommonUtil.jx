@@ -1,0 +1,7 @@
+public class{
+  private something:string = 'something for testing'
+  public doSomething(){}
+  public getSomething():string {
+    return this.something
+  }
+}

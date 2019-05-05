@@ -1,0 +1,56 @@
+{
+  "name": "xwebjs-lang",
+  "version": "1.0.0",
+  "description": "JavaScript library for supporting OO programming language features",
+  "main": "xwebjs-lang.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate-docs": "node_modules/.bin/jsdoc -c jsdoc.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nickligit/xwebjs-lang.git"
+  },
+  "keywords": [
+    "JavaScript",
+    "OO",
+    "programming"
+  ],
+  "author": "nickligit <nmrkli@163.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nickligit/xwebjs-lang/issues"
+  },
+  "homepage": "https://github.com/nickligit/xwebjs-lang#readme",
+  "devDependencies": {
+    "cnpm": "^6.0.0",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-jasmine": "^2.2.0",
+    "eslint-plugin-node": "^5.2.1",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "fs-extra": "^2.1.2",
+    "gulp": "^3.9.1",
+    "gulp-eslint": "^3.0.1",
+    "gulp-jasmine-browser": "^1.7.1",
+    "gulp-watch": "^4.3.11",
+    "jasmine": "^2.5.3",
+    "jasmine-core": "^2.99.1",
+    "jsdoc": "^3.5.5",
+    "karma": "^1.7.1",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-firefox-launcher": "^1.0.1",
+    "karma-ie-launcher": "^1.0.0",
+    "karma-jasmine": "^1.1.2",
+    "karma-safari-launcher": "^1.0.0",
+    "phantomjs": "^2.1.7",
+    "standard": "^10.0.2",
+    "yargs": "^10.0.3"
+  },
+  "dependencies": {
+    "axios": "^0.18.0",
+    "q": "1.5.0",
+    "underscore": "^1.8.3"
+  }
+}

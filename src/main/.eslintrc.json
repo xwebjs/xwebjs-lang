@@ -1,0 +1,19 @@
+{
+  "extends": [
+    "standard"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 5,
+    "sourceType": "script"
+  },
+  "env": {
+    "browser": true,
+    "amd": true,
+    "worker": true
+  },
+  "globals": {
+    "_x": true,
+    "_": true,
+    "Q": true
+  }
+}
