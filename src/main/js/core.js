@@ -42,7 +42,8 @@
         initDependencyChecker()
         var checkResult = dependencyChecker.check(dependencies)
         if (checkResult.length !== 0) {
-          throw Error('Dependency check failed because :\n' + checkResult.join('\n'))
+          throw Error(
+            'Dependency check failed because :\n' + checkResult.join('\n'))
         }
       })()
       var initUtil = function () {
@@ -64,7 +65,8 @@
             ) ||
             // compare primitive string,number,boolean primitive type
             (
-              (_.isString(type) && ['string', 'number', 'boolean'].indexOf(type) !== -1) &&
+              (_.isString(type) &&
+                ['string', 'number', 'boolean'].indexOf(type) !== -1) &&
               (typeof value).toLowerCase() === type
             ) ||
             // compare primitive function type
@@ -134,7 +136,8 @@
               funcInfo.method = func
               return funcInfo
             } else {
-              throw Error('unable to grab function information from invalid function')
+              throw Error(
+                'unable to grab function information from invalid function')
             }
           },
           hasMethod: function (method, tempMethods) {
@@ -183,10 +186,13 @@
         var hookProcessEachArrayElement = 'processEachArrayElement'
         var hookProcessEachObjectKeyElement = 'processEachObjectKeyElement'
         var hookBeforeProcessEachItem = 'beforeProcessEachItem'
-        var returnType = function (value,
-                                   propertyNameOfReturnedValue,
-                                   eachSrcMetaInfo) {
-          var type = _.isObject(eachSrcMetaInfo) ? eachSrcMetaInfo.type : undefined
+        var returnType = function (
+          value,
+          propertyNameOfReturnedValue,
+          eachSrcMetaInfo) {
+          var type = _.isObject(eachSrcMetaInfo)
+            ? eachSrcMetaInfo.type
+            : undefined
           if (_.isEmpty(type)) {
             return 'any'
           } else if (
@@ -202,7 +208,8 @@
           if (_.isString(srcNodeInfo)) {
             return srcNodeInfo
           } else {
-            throw new Error('missing node name information or it is not string type')
+            throw new Error(
+              'missing node name information or it is not string type')
           }
         }
         var returnMethod = function (srcNodeInfo) {
@@ -264,9 +271,10 @@
               returnValue: returnType
             },
             shared: {
-              returnValue: function (value,
-                                     propertyNameOfReturnedValue,
-                                     eachSrcMetaInfo) {
+              returnValue: function (
+                value,
+                propertyNameOfReturnedValue,
+                eachSrcMetaInfo) {
                 return (_.isObject(eachSrcMetaInfo) && eachSrcMetaInfo.shared)
               }
             },
@@ -401,31 +409,35 @@
             }
           }
         })()
-        metaExtractFunction = function (srcMetaInfo, srcParentMetaInfo, extractionRule) {
+        metaExtractFunction = function (
+          srcMetaInfo, srcParentMetaInfo, extractionRule) {
           var extractionResult = {
             resultMetaInfo: undefined,
             resultParentInfo: undefined
           }
 
           function extractSrcMetaInfo (srcMetaInfo) {
-            function extractNode (nodeRule, srcMetaForRule, propertyNameOfReturnedValue,
+            function extractNode (nodeRule, srcMetaForRule,
+                                  propertyNameOfReturnedValue,
                                   parentSrcMetaForRule) {
               var nodeValue
 
               function processEachSrcMetaElement (eachSrcMetaInfo) {
                 var eachCleanSrcMetaInfo = {}
-                _.each(nodeRule.childElements, function (elementRule, elementName) {
-                  if (hookCalls[hookBeforeProcessEachItem]) {
-                    eachSrcMetaInfo = hookCalls[hookBeforeProcessEachItem](eachSrcMetaInfo)
-                  }
-                  eachCleanSrcMetaInfo[elementName] = extractNode(
-                    elementRule,
-                    !_.isUndefined(eachSrcMetaInfo[elementName])
-                      ? eachSrcMetaInfo[elementName] : eachSrcMetaInfo.value,
-                    elementName,
-                    eachSrcMetaInfo
-                  )
-                }, this)
+                _.each(nodeRule.childElements,
+                  function (elementRule, elementName) {
+                    if (hookCalls[hookBeforeProcessEachItem]) {
+                      eachSrcMetaInfo = hookCalls[hookBeforeProcessEachItem](
+                        eachSrcMetaInfo)
+                    }
+                    eachCleanSrcMetaInfo[elementName] = extractNode(
+                      elementRule,
+                      !_.isUndefined(eachSrcMetaInfo[elementName])
+                        ? eachSrcMetaInfo[elementName] : eachSrcMetaInfo.value,
+                      elementName,
+                      eachSrcMetaInfo
+                    )
+                  }, this)
                 return eachCleanSrcMetaInfo
               }
 
@@ -439,14 +451,16 @@
               _.each(hooks, function (hook) {
                 var hookFunc
                 hookCalls[hook] =
-                  ((hookFunc = nodeRule[hook]) && _.isFunction(hookFunc) && hookFunc
+                  ((hookFunc = nodeRule[hook]) && _.isFunction(hookFunc) &&
+                    hookFunc
                   ) || undefined
               }, this)
               if (srcMetaForRule === undefined) {
                 return undefined
               }
               if (hookCalls[hookBeforeProcessAllItems]) {
-                srcMetaForRule = hookCalls[hookBeforeProcessAllItems](srcMetaForRule)
+                srcMetaForRule = hookCalls[hookBeforeProcessAllItems](
+                  srcMetaForRule)
               }
               if (_.isFunction(nodeRule.returnValue)) {
                 // while it is handling returning value
@@ -602,7 +616,8 @@
           var errors = []
           if (!_.isEmpty(faces)) {
             _.each(faces, function (faceRef) {
-              var validationError = clsValidator._validateClassFaceImplementation(classRef, faceRef)
+              var validationError = clsValidator._validateClassFaceImplementation(
+                classRef, faceRef)
               if (!_.isEmpty(validationError)) {
                 errors.push(validationError)
               }
@@ -624,7 +639,8 @@
                 }
               )) {
                 errors.push(
-                  'interface method: ' + faceMethodInfo.name + ' implementation is not found'
+                  'interface method: ' + faceMethodInfo.name +
+                  ' implementation is not found'
                 )
                 return false
               }
@@ -634,7 +650,8 @@
         }
       }
       var clsPropertyUtil = {
-        assignPropertyValue: function (propInfo, properties, nonSharedProperties) {
+        assignPropertyValue: function (
+          propInfo, properties, nonSharedProperties) {
           if (_.isUndefined(propInfo.defaultValue)) {
             properties[propInfo.name] = undefined
           } else if (
@@ -648,7 +665,8 @@
             properties[propInfo.name] = propInfo.defaultValue
           }
         },
-        assignProperties: function (classMeta, obj, allProperties, allNonSharedValueProperties) {
+        assignProperties: function (
+          classMeta, obj, allProperties, allNonSharedValueProperties) {
           var properties = {}
           var propertyTypeInfo = {}
 
@@ -665,7 +683,8 @@
             }
             _.each(metaInfo.props, function (propInfo) {
               propertyTypeInfo[propInfo.name] = propInfo.type
-              clsPropertyUtil.assignPropertyValue(propInfo, properties, allNonSharedValueProperties)
+              clsPropertyUtil.assignPropertyValue(propInfo, properties,
+                allNonSharedValueProperties)
             })
           }
 
@@ -696,51 +715,68 @@
                     var valueTypeOfValue = (typeof value).toLowerCase()
                     var exTypeName =
                       (_.isString(valueType) && valueType) ||
-                      (_.isFunction(valueType) && valueType.isCustomClass && 'Class') ||
-                      (_.isObject(valueType) && valueType.isCustomIf && 'Interface') ||
+                      (_.isFunction(valueType) && valueType.isCustomClass &&
+                        'Class') ||
+                      (_.isObject(valueType) && valueType.isCustomIf &&
+                        'Interface') ||
                       'unknown'
                     var acTypeName =
-                      (_.contains(['string', 'number', 'boolean'], valueTypeOfValue) && valueTypeOfValue) ||
-                      (valueTypeOfValue === 'object' && (value instanceof RootType) && 'Class') ||
-                      (valueTypeOfValue === 'object' && !(value instanceof RootType) && 'object') ||
-                      (valueTypeOfValue === 'function' && !(value.isCustomClass) && 'function') ||
-                      (valueTypeOfValue === 'function' && value.isCustomClass && 'Class type') ||
+                      (_.contains(['string', 'number', 'boolean'],
+                        valueTypeOfValue) && valueTypeOfValue) ||
+                      (valueTypeOfValue === 'object' &&
+                        (value instanceof RootType) && 'Class') ||
+                      (valueTypeOfValue === 'object' &&
+                        !(value instanceof RootType) && 'object') ||
+                      (valueTypeOfValue === 'function' &&
+                        !(value.isCustomClass) && 'function') ||
+                      (valueTypeOfValue === 'function' && value.isCustomClass &&
+                        'Class type') ||
                       'unknown'
                     if (
-                      _.contains(['string', 'number', 'boolean', 'object'], exTypeName) &&
+                      _.contains(['string', 'number', 'boolean', 'object'],
+                        exTypeName) &&
                       acTypeName !== exTypeName
                     ) {
                       throw Error(
-                        'The type of value for property "' + key + '" is invalid because:\n' +
-                        'the assigned value type is: "' + acTypeName + '" but the expected type is "' + exTypeName + '"'
+                        'The type of value for property "' + key +
+                        '" is invalid because:\n' +
+                        'the assigned value type is: "' + acTypeName +
+                        '" but the expected type is "' + exTypeName + '"'
                       )
                     } else if (exTypeName === 'Interface') {
                       if (acTypeName === 'Class') {
                         throw Error(
-                          'The type of value for property "' + key + '" is invalid because:\n' +
+                          'The type of value for property "' + key +
+                          '" is invalid because:\n' +
                           'the assigned class instance does not implement the expected interface type'
                         )
                       } else {
                         throw Error(
-                          'The type of value for property "' + key + '" is invalid because:\n' +
-                          'the assigned value type is:"' + acTypeName + '" but the expected type is "' + exTypeName + '"'
+                          'The type of value for property "' + key +
+                          '" is invalid because:\n' +
+                          'the assigned value type is:"' + acTypeName +
+                          '" but the expected type is "' + exTypeName + '"'
                         )
                       }
                     } else if (exTypeName === 'Class') {
                       if (acTypeName === 'Class') {
                         throw Error(
-                          'The type of value for property "' + key + '" is invalid because:\n' +
+                          'The type of value for property "' + key +
+                          '" is invalid because:\n' +
                           'the assigned class instance is not the expected type of Class'
                         )
                       } else {
                         throw Error(
-                          'The type of value for property "' + key + '" is invalid because:\n' +
-                          'the assigned value type is:"' + acTypeName + '" but the expected type is "' + exTypeName + '"'
+                          'The type of value for property "' + key +
+                          '" is invalid because:\n' +
+                          'the assigned value type is:"' + acTypeName +
+                          '" but the expected type is "' + exTypeName + '"'
                         )
                       }
                     } else {
                       throw Error(
-                        'The type of value for property "' + key + '" is invalid because of unknown issue'
+                        'The type of value for property "' + key +
+                        '" is invalid because of unknown issue'
                       )
                     }
                   }
@@ -763,12 +799,14 @@
           if (!methodNameIndex) {
             return result
           }
-          findResult = clsMethodUtil.findMethodByComparingParameter(params, map[mapType][methodName])
+          findResult = clsMethodUtil.findMethodByComparingParameter(params,
+            map[mapType][methodName])
           if (!findResult.errors) {
             result.method = findResult.method
             result.isFound = true
           } else {
-            result.errors = 'method "' + methodName + '" is not found because ' + findResult.errors
+            result.errors = 'method "' + methodName +
+              '" is not found because ' + findResult.errors
           }
           return result
         },
@@ -801,7 +839,8 @@
           }, this)
           return map
         },
-        findMethodFromParentClass: function (pClass, methodName, methodType, args) {
+        findMethodFromParentClass: function (
+          pClass, methodName, methodType, args) {
           var result = {
             isFound: false,
             method: null,
@@ -860,7 +899,8 @@
                 } else {
                   isMatched = false
                   continueCheck = false
-                  result.errors = 'the parameter at the position #' + (paramIndex + 1) +
+                  result.errors = 'the parameter at the position #' +
+                    (paramIndex + 1) +
                     ' is not matched with expected parameter type'
                 }
               }, this)
@@ -887,7 +927,8 @@
         if (_.isEmpty(checkErrors)) {
           return ''
         } else {
-          return 'declared class does not implement required methods in declared interface, caused by : \n' + checkErrors
+          return 'declared class does not implement required methods in declared interface, caused by : \n' +
+            checkErrors
         }
       }
       root.createIf = function (metaInfo, pIfs) {
@@ -918,7 +959,8 @@
         }
 
         parentIfs = extractParentIfInfo(pIfs)
-        extractionResult = metaExtractFunction(metaInfo, parentIfs, ifMetaExtractionRule)
+        extractionResult = metaExtractFunction(metaInfo, parentIfs,
+          ifMetaExtractionRule)
         builtIf = build(extractionResult.resultMetaInfo, parentIfs)
         return builtIf
       }
@@ -944,7 +986,8 @@
             this.$ = XClass._statics
             this.__runtime = {}
             if (searchResult.isFound) {
-              clsMethodUtil.recordLastMethodCall('construct', arguments, searchResult.method, this)
+              clsMethodUtil.recordLastMethodCall('construct', arguments,
+                searchResult.method, this)
               searchResult.method.apply(this, arguments)
             }
           }
@@ -954,7 +997,8 @@
           }, this)
 
           // populate constructor methods
-          methodMap[methodContainerType.methodTypeConstruct] = clsMethodUtil.makeMethodMap(cleanMetaInfo.construct)
+          methodMap[methodContainerType.methodTypeConstruct] = clsMethodUtil.makeMethodMap(
+            cleanMetaInfo.construct)
 
           // populate static properties
           var metaStaticPropsInfo = cleanMetaInfo.staticProps
@@ -981,7 +1025,8 @@
 
           // populate static methods
           var metaStaticMethodsInfo = cleanMetaInfo.staticMethods
-          methodMap[methodContainerType.methodTypeStatic] = clsMethodUtil.makeMethodMap(metaStaticMethodsInfo)
+          methodMap[methodContainerType.methodTypeStatic] = clsMethodUtil.makeMethodMap(
+            metaStaticMethodsInfo)
           _.each(metaStaticMethodsInfo, function (methodInfo) {
             XClass[methodInfo.name] = (function (pMethodInfo) {
               return function () {
@@ -1019,7 +1064,8 @@
             var lastMethodCallInfo = this.__runtime.lastMethodCallInfo
             var caller = arguments.callee.caller.caller
             var args = arguments
-            if (arguments.length > 0 && typeof arguments[0].callee === 'function') {
+            if (arguments.length > 0 && typeof arguments[0].callee ===
+              'function') {
               args = arguments[0]
             }
             if (caller.isCustomClass) {
@@ -1034,7 +1080,9 @@
               ) {
                 throw Error('callParent method must be called at the beginning')
               }
-              var methodType = methodName === 'construct' ? methodContainerType.methodTypeConstruct : methodContainerType.methodTypeInstance
+              var methodType = methodName === 'construct'
+                ? methodContainerType.methodTypeConstruct
+                : methodContainerType.methodTypeInstance
               var result = clsMethodUtil.findMethodFromParentClass(
                 parentClass,
                 methodName,
@@ -1055,7 +1103,8 @@
 
           // populate instance methods
           var metaMethodsInfo = cleanMetaInfo.methods
-          methodMap[methodContainerType.methodTypeInstance] = clsMethodUtil.makeMethodMap(metaMethodsInfo)
+          methodMap[methodContainerType.methodTypeInstance] = clsMethodUtil.makeMethodMap(
+            metaMethodsInfo)
           _.each(metaMethodsInfo, function (methodInfo) {
             XClass.prototype[methodInfo.name] = (function (pMethodInfo) {
               var fn = function () {
@@ -1066,7 +1115,8 @@
                   methodMap
                 )
                 if (searchResult.isFound) {
-                  clsMethodUtil.recordLastMethodCall(pMethodInfo.name, arguments, searchResult.method, this)
+                  clsMethodUtil.recordLastMethodCall(pMethodInfo.name,
+                    arguments, searchResult.method, this)
                   return searchResult.method.apply(this, arguments)
                 } else {
                   throw Error(searchResult.errors)
@@ -1081,7 +1131,9 @@
           XClass._meta = {
             classInfo: cleanMetaInfo,
             methodMap: methodMap,
-            implements: (_.isEmpty(cleanMetaInfo.implements) ? [] : cleanMetaInfo.implements),
+            implements: (_.isEmpty(cleanMetaInfo.implements)
+              ? []
+              : cleanMetaInfo.implements),
             parentClass: parentClass
           }
           cleanMetaInfo.implements = undefined
@@ -1143,7 +1195,8 @@
         }
 
         parentClassInfo = extractParentClassInfo(parentClass)
-        extractionResult = metaExtractFunction(metaInfo, parentClass, classMetaExtractionRule)
+        extractionResult = metaExtractFunction(metaInfo, parentClass,
+          classMetaExtractionRule)
         builtCls = build(extractionResult.resultMetaInfo, parentClassInfo)
 
         var result = root.validateCls(builtCls)
