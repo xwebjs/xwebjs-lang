@@ -1,7 +1,5 @@
 {
-  "extends": [
-    "standard"
-  ],
+  "extends": "standard",
   "parserOptions": {
     "ecmaVersion": 5,
     "sourceType": "script"
@@ -14,6 +12,15 @@
   "globals": {
     "_x": true,
     "_": true,
-    "Q": true
+    "Q": true,
+    "axios": true
+  },
+  "rules": {
+    "no-tabs": 0,
+    "no-mixed-spaces-and-tabs": 0,
+    "indent": [
+      "off",
+      "tab"
+    ]
   }
 }

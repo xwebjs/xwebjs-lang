@@ -75,7 +75,8 @@
         content: function (srcInfo) {
           var errors = []
           if (
-            (!_x.isCustomIf(srcInfo.content) && !_x.isCustomClass(srcInfo.content))
+            (!_x.isCustomIf(srcInfo.content) &&
+              !_x.isCustomClass(srcInfo.content))
           ) {
             errors.push('Module content must be custom class or interface type')
           }
@@ -128,7 +129,7 @@
               type: 'any'
             },
             moduleContextPath: null,
-            dependencies: null,
+            dependencies: null
           },
           construct: [
             function (content, dependencies) {
@@ -186,7 +187,7 @@
               if (this.content.isCustomClass) {
                 return this.content
               } else {
-                throw 'XModule content is not class'
+                throw Error('XModule content is not class')
               }
             },
             getInterface: function () {
@@ -194,7 +195,7 @@
               if (this.content.isCustomIf) {
                 return this.content
               } else {
-                throw 'XModule content is not interface'
+                throw Error('XModule content is not interface')
               }
             },
             isClass: function () {
@@ -209,7 +210,6 @@
 
       // mount API
       root.defineModule = XModule.defineModule
-
     }
 
     /**
@@ -270,7 +270,6 @@
      * @class XModuleContext
      */
     function enableModuleContext () {
-
       /**
        * @summary
        * Manage the loading chain and
@@ -304,7 +303,8 @@
         ).catch(
           function (error) {
             deferred.reject(error)
-            logger.error('Failed to generate loading module promise because: ' + error)
+            logger.error(
+              'Failed to generate loading module promise because: ' + error)
           }
         )
 
@@ -316,7 +316,8 @@
         var moduleFilePaths = []
         moduleFilePaths.push(
           {
-            filePath: generateRemoteModuleFilePath.call(me, loadingModuleInfo.modulePath),
+            filePath: generateRemoteModuleFilePath.call(me,
+              loadingModuleInfo.modulePath),
             fullPath: loadingModuleInfo.modulePath
           }
         )
@@ -325,8 +326,9 @@
           function (modulesContent) {
             var loadedModuleRawConent = modulesContent[0]
             if (!loadedModuleRawConent.isSuccess) {
-              throw Error('Failed to load module:' + loadedModuleRawConent.modulePath)
               loadingModuleInfo.status = 5
+              throw Error(
+                'Failed to load module:' + loadedModuleRawConent.modulePath)
             }
             loadingModuleInfo.status = 2
             loadingModuleInfo.rawContent = loadedModuleRawConent.content
@@ -356,8 +358,14 @@
         ).catch(
           function (error) {
             loadingModuleInfo.status = 4
-            logger.error('Failed to prepare the module [' + moduleContent.modulePath + '] because ' + error)
-            throw new Error('Fail to load the dependent module [' + moduleContent.modulePath + '] ')
+            logger.error(
+              'Failed to prepare the module [' +
+              loadingModuleInfo.modulePath +
+              '] because ' + error)
+            throw new Error(
+              'Fail to load the dependent module [' +
+              loadingModuleInfo.modulePath +
+              '] ')
           }
         )
       }
@@ -379,14 +387,14 @@
           if (
             _.keys(moduleContent.metaInfo.imports).length > 0
           ) {
-            return me.loadModules(moduleContent.metaInfo.imports)
-              .then(
-                function (dependencies) {
-                  return moduleContent.factoryFn.apply(
-                    me, validateAndAdjustArguments(dependencies, moduleContent.factoryFn)
-                  )
-                }
-              )
+            return me.loadModules(moduleContent.metaInfo.imports).then(
+              function (dependencies) {
+                return moduleContent.factoryFn.apply(
+                  me, validateAndAdjustArguments(dependencies,
+                    moduleContent.factoryFn)
+                )
+              }
+            )
           } else {
             return Q(moduleContent.factoryFn())
           }
@@ -400,17 +408,18 @@
           function (param, index) {
             var findIndex = _.findIndex(
               args, function (arg) {
-                if (arg.getModuleContextPath().indexOf(param.name) != -1) {
+                if (arg.getModuleContextPath().indexOf(param.name) !== -1) {
                   return true
                 } else {
                   return false
                 }
               }
             )
-            if (findIndex != -1) {
+            if (findIndex !== -1) {
               newArgs.push(args[findIndex].getContent())
             } else {
-              throw Error('Parameter "' + param.name + '" has no matched imported dependency')
+              throw Error('Parameter "' + param.name +
+                '" has no matched imported dependency')
             }
           }
         )
@@ -431,8 +440,8 @@
        * @returns {string} - file resource uri
        */
       function generateRemoteModuleFilePath (modulePath) {
-        return this.contextConfiguration.loader.basePath + '/'
-          + modulePath.replace(/\./g, '/') + '.js'
+        return this.contextConfiguration.loader.basePath + '/' +
+          modulePath.replace(/\./g, '/') + '.js'
       }
 
       /**
@@ -471,13 +480,14 @@
           bcodes = validateAndPrepareModuleCodes(codes, requestId)
           bcodes = window.btoa(bcodes)
           oScript = document.createElement('script')
-          oScript.type = 'text\/javascript'
-          oScript.src = 'data:application/x-javascript;charset=UTF-8;base64,' + bcodes
+          oScript.type = 'text/javascript'
+          oScript.src = 'data:application/x-javascript;charset=UTF-8;base64,' +
+            bcodes
           var checker = setInterval(function (eventInfo) {
             if (moduleParsedModules[requestId]) {
               if (
-                _.isObject(moduleParsedModules[requestId].metaInfo)
-                && _.isFunction(moduleParsedModules[requestId].factoryFn)
+                _.isObject(moduleParsedModules[requestId].metaInfo) &&
+                _.isFunction(moduleParsedModules[requestId].factoryFn)
               ) {
                 deferred.resolve(moduleParsedModules[requestId])
                 moduleParsedModules[requestId] = null
@@ -487,7 +497,8 @@
               clearInterval(checker)
             } else {
               if (checkerNum > 1000) {
-                logger.error('Unexpected timeout on getting module content from export function')
+                logger.error(
+                  'Unexpected timeout on getting module content from export function')
                 clearInterval(checker)
               } else {
                 checkerNum++
@@ -501,10 +512,10 @@
         function validateAndPrepareModuleCodes (codes, requestId) {
           var prefix = '_x.exportModule('
           var fcodes
-          if (codes.substr(0, prefix.length) == prefix) {
-            fcodes = prefix + '\''
-              + requestId + '\','
-              + codes.slice(prefix.length)
+          if (codes.substr(0, prefix.length) === prefix) {
+            fcodes = prefix + '\'' +
+              requestId + '\',' +
+              codes.slice(prefix.length)
             return fcodes
           } else {
             throw Error('Invalide module content')
@@ -567,7 +578,8 @@
 
         function checkCompletion () {
           var me = this
-          var processedFileNum = processedSuccessFulFileNum + processedFailedFileNum
+          var processedFileNum = processedSuccessFulFileNum +
+            processedFailedFileNum
           deferred.notify(processedFileNum + 1 / modulesInfo.length + 1)
           if (processedFileNum === modulesInfo.length && !isReturned) {
             prepareReturnData()
@@ -584,7 +596,8 @@
           modulesInfo = _x.util.asArray(modulesInfo)
           _.each(modulesInfo,
             function (moduleInfo, index, files) {
-              logger.debug('Load module info through file path:' + moduleInfo.filePath)
+              logger.debug(
+                'Load module info through file path:' + moduleInfo.filePath)
               loadedFilesContent[moduleInfo.fullPath] = {
                 order: index,
                 moduleInfo: null
@@ -734,9 +747,9 @@
                     return modules[0]
                   },
                   function (errors) {
-                    throw Error('Failed to load module path: '
-                      + moduleFilePath + ' because of '
-                      + errors
+                    throw Error('Failed to load module path: ' +
+                      moduleFilePath + ' because of ' +
+                      errors
                     )
                   }
                 )
@@ -752,8 +765,8 @@
                   if (me.hasModule(modulePath)) {
                     loadingModules.push(me.getModule(modulePath))
                   } else if (
-                    moduleLoading
-                    && (moduleLoading.status == 1 || moduleLoading.status == 2)
+                    moduleLoading &&
+                    (moduleLoading.status === 1 || moduleLoading.status === 2)
                   ) {
                     loadingModules.push(moduleLoading.promise)
                   } else {
@@ -768,7 +781,8 @@
             register: [
               function (fullName, moduleContent) {
                 var pathInfo = XModuleContext.parseName(fullName)
-                return this.register(pathInfo.packagePath, pathInfo.moduleName, moduleContent)
+                return this.register(pathInfo.packagePath, pathInfo.moduleName,
+                  moduleContent)
               },
               function (packagePath, moduleName, moduleContent) {
                 var packagePaths = packagePath.split('.')
@@ -778,7 +792,8 @@
                     if (!currentPackage.hasPackage(packageName)) {
                       currentPackage = currentPackage.addPackage(packageName)
                     } else {
-                      currentPackage = currentPackage.getRootPackage(packageName)
+                      currentPackage = currentPackage.getRootPackage(
+                        packageName)
                     }
                   }
                 }, this)
@@ -788,7 +803,8 @@
                   // throw new Error('XModule name "' + moduleName + '" has existed in the xPackage "' + packagePath)
                 } else {
                   currentPackage.addModule(moduleName, moduleContent)
-                  moduleContent.setModuleContextPath(packagePath + '.' + moduleName)
+                  moduleContent.setModuleContextPath(
+                    packagePath + '.' + moduleName)
                 }
               }
             ],
@@ -838,7 +854,8 @@
               },
               function (fullName, tryRemote) {
                 var info = XModuleContext.parseName(fullName)
-                return this.getModule(info.packagePath, info.moduleName, tryRemote)
+                return this.getModule(info.packagePath, info.moduleName,
+                  tryRemote)
               },
               function (packagePath, moduleName, tryRemote) {
                 var me = this
@@ -847,23 +864,7 @@
                 if (xPackage.hasModule(moduleName) && !tryRemote) {
                   return xPackage.modules[moduleName]
                 } else {
-                  if (!_.isNull(this.parentContext)) {
-                    return this.parentContext.getModule(modulePath, false).then(
-                      function (moduleContent) {
-                        me.register(modulePath, moduleContent)
-                        return moduleContent
-                      },
-                      function (errors) {
-                      }
-                    )
-                  } else {
-                    if (!tryRemote) {
-                      Q.reject('Unable to find the module ' + packagePath + '.' + moduleName
-                        + ' without trying the remote loading')
-                    } else {
-                      return tryLoadRemoteModule.call(me, packagePath, moduleName)
-                    }
-                  }
+                  //todo
                 }
               }
             ],
@@ -877,12 +878,14 @@
                 if (this.hasPackage(packagePath)) {
                   xPackage = this.getRootPackage(packagePath)
                   if (!xPackage) {
-                    logger.warn('The package path ' + packagePath + ' doesn\'t exist ')
+                    logger.warn(
+                      'The package path ' + packagePath + ' doesn\'t exist ')
                   }
                   if (xPackage.hasModule(moduleName)) {
                     return true
                   } else {
-                    logger.warn('The module ' + packagePath + '.' + moduleName + ' doesn\'t exist ')
+                    logger.warn('The module ' + packagePath + '.' + moduleName +
+                      ' doesn\'t exist ')
                     return false
                   }
                 } else {
@@ -896,7 +899,8 @@
 
       // mount API
       root.createModuleContext = function (parentCtx) {
-        return XModuleContext.createModuleContext.apply(XModuleContext, arguments)
+        return XModuleContext.createModuleContext.apply(XModuleContext,
+          arguments)
       }
     }
 
@@ -904,7 +908,6 @@
      * @class XSystem
      */
     function enableSystem () {
-
       /**
        * @static
        * @memberOf XSystem
@@ -965,7 +968,8 @@
                 }
               ).catch(
                 function (errors) {
-                  console.error('Failed to initialize the xSystem, caused by:' + errors)
+                  console.error(
+                    'Failed to initialize the xSystem, caused by:' + errors)
                   throw Error(errors)
                 }
               )
@@ -996,15 +1000,16 @@
      * @class XApp
      */
     function enableApplication () {
-
       function identifyAppEntryClass () {
         var entryClassNames = this.appConfiguration.entryClassNames
         var firstModule
         if (entryClassNames.length > 0) {
-          firstModule = this.getModule(this.appConfiguration.entryClassNames[0], false)
+          firstModule = this.getModule(this.appConfiguration.entryClassNames[0],
+            false)
           return firstModule.getClass()
         } else {
-          throw Error('Unable to identify application entry class because appConfiguration.' +
+          throw Error(
+            'Unable to identify application entry class because appConfiguration.' +
             'entryClassNames are invalids')
         }
       }
@@ -1044,7 +1049,8 @@
               ).catch(
                 function (error) {
                   logger.error('Fail to load entry classes, because:' + error)
-                  throw new Error('Failed to initialize application context on loading the entry class')
+                  throw new Error(
+                    'Failed to initialize application context on loading the entry class')
                 }
               )
             },
@@ -1061,7 +1067,8 @@
             },
             initAppContext: function () {
               var me = this
-              return me.loadModules(_x.util.asArray(me.appConfiguration.entryClassNames))
+              return me.loadModules(
+                _x.util.asArray(me.appConfiguration.entryClassNames))
             },
             start: function () {
               return this.mAppClass.main()
@@ -1077,7 +1084,6 @@
       }
 
       root.exportModule = XModule.exportModule
-
     }
 
     function init () {
@@ -1095,13 +1101,13 @@
 
     var checkResult = _x.util.dependencyChecker.check(dependencies)
     if (checkResult.length !== 0) {
-      throw Error('Dependency check failed because :\n' + checkResult.join('\n'))
+      throw Error(
+        'Dependency check failed because :\n' + checkResult.join('\n'))
     }
 
     Q.when(init()).then(
       postProcess
     )
-
   }
 
 )()
