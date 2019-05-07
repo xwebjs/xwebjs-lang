@@ -3,11 +3,8 @@
     var root = _x
     var XModule, XPackage, XModuleContext, XApp, XSystem
     var xSystem
-    var systemCtx
-    var systemDefaultApp
     var WebResourceUtil
     var logger
-
     var dependencies = {
       'core': {
         checkFn: function () {
@@ -35,7 +32,7 @@
       }
       WebResourceUtil = (function () {
         function storeResource (packagePath, modulName, codes) {
-
+          //todo
         }
 
         return _x.createCls(
@@ -104,7 +101,7 @@
           errors.push('XModule meta info must be object type:' + info)
         }
         info.content = content
-        _.forEach(metaExtraction, function (metaExtractor, key, obj) {
+        _.forEach(metaExtraction, function (metaExtractor, key) {
           var extractionResult = metaExtractor(info)
           if (extractionResult.errors.length === 0) {
             metaInfo[key] = extractionResult.result
@@ -183,7 +180,6 @@
               return this.content
             },
             getClass: function () {
-              var content = this.getContent()
               if (this.content.isCustomClass) {
                 return this.content
               } else {
@@ -191,7 +187,6 @@
               }
             },
             getInterface: function () {
-              var content = this.getContent()
               if (this.content.isCustomIf) {
                 return this.content
               } else {
@@ -473,7 +468,7 @@
           oScript.type = 'text/javascript'
           oScript.src = 'data:application/x-javascript;charset=UTF-8;base64,' +
             bcodes
-          var checker = setInterval(function (eventInfo) {
+          var checker = setInterval(function () {
             if (moduleParsedModules[requestId]) {
               if (
                 _.isObject(moduleParsedModules[requestId].metaInfo) &&
@@ -565,7 +560,6 @@
         }
 
         function checkCompletion () {
-          var me = this
           var processedFileNum = processedSuccessFulFileNum +
             processedFailedFileNum
           deferred.notify(processedFileNum + 1 / modulesInfo.length + 1)
@@ -583,7 +577,7 @@
         if (!_.isEmpty(modulesInfo)) {
           modulesInfo = _x.util.asArray(modulesInfo)
           _.forEach(modulesInfo,
-            function (moduleInfo, index, files) {
+            function (moduleInfo, index) {
               logger.debug(
                 'Load module info through file path:' + moduleInfo.filePath)
               loadedFilesContent[moduleInfo.fullPath] = {
@@ -658,7 +652,7 @@
             /**
              * @memberOf XModuleContext#
              * @public
-             * @staic
+             * @static
              * @method
              * @returns {Object} - path in details
              */
@@ -698,18 +692,13 @@
             getContextPackage: function () {
               return this.ctxPackage
             },
-            setLoaderConfig: function (config) {
-              if (_.isObject(config) && _.isString(config.urlRoot)) {
-                this.moduleLoaderConfig.urlRoot = config.urlRoot
-              }
-            },
             /**
              * @memberOf XModuleContext#
              * @public
              * @instance
              * @method
              * @param libFiles
-             * @returns {*|PromiseLike<T | never>|Promise<T | never>}
+             * @returns {*|PromiseLike}
              */
             loadLibs: function (libFiles) {
               var me = this
