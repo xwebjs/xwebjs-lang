@@ -1,5 +1,8 @@
 {
-  "extends": "standard",
+  "extends": [
+    "standard",
+    "plugin:lodash/canonical"
+  ],
   "parserOptions": {
     "ecmaVersion": 5,
     "sourceType": "script"
@@ -11,10 +14,13 @@
   },
   "globals": {
     "_x": true,
-    "_": true,
     "Q": true,
-    "axios": true
+    "axios": true,
+    "_": true
   },
+  "plugins": [
+    "lodash"
+  ],
   "rules": {
     "no-tabs": 0,
     "no-mixed-spaces-and-tabs": 0,

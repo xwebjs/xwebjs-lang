@@ -11,14 +11,12 @@ var args = require('yargs').argv
 
 var paths = {
   target: '../target',
-  targetLibs: '../target/libs',
+  targetLibs: '../libs',
   targetJs: '../target/js',
   nodeModulePath: '../node_modules',
   mainSource: '../src/main',
   testSource: '../src/test',
-  testSourceFilesPath: [
-
-  ]
+  testSourceFilesPath: [],
 }
 
 gulp.task('clean', function () {
@@ -43,8 +41,7 @@ gulp.task('process-resources', function () {
  * Testing phase
  */
 gulp.task('compile', ['process-resources'], function () {
-  return gulp.src([paths.mainSource + '/**/*.js'])
-    .pipe(gulp.dest(paths.target))
+  return gulp.src([paths.mainSource + '/**/*.js']).pipe(gulp.dest(paths.target))
 })
 
 gulp.task('compile_app', function () {
@@ -54,22 +51,22 @@ gulp.task('compile_app', function () {
 gulp.task('test', ['compile', 'test-codeCheck', 'test-headless'])
 
 gulp.task('test-codeCheck', function () {
-  return gulp.src([paths.mainSource + '/**/*.js'])
-    .pipe(eslint())
-    .pipe(eslint.format())
-    .pipe(eslint.failAfterError())
+  return gulp.src([paths.mainSource + '/**/*.js']).
+  pipe(eslint()).
+  pipe(eslint.format()).
+  pipe(eslint.failAfterError())
 })
 
 gulp.task('test-headless', ['compile'], function () {
-  return gulp.src(paths.testSourceFilesPath)
-    .pipe(jasmineBrowser.specRunner({console: true}))
-    .pipe(jasmineBrowser.headless())
+  return gulp.src(paths.testSourceFilesPath).
+  pipe(jasmineBrowser.specRunner({ console: true })).
+  pipe(jasmineBrowser.headless())
 })
 
 gulp.task('test-on-karma', ['compile', 'test-codeCheck'], function (done) {
   new KarmaServer({
     configFile: path.resolve('../karma.conf.js'),
-    singleRun: true
+    singleRun: true,
   }, done).start()
 })
 
@@ -82,14 +79,14 @@ gulp.task('default', ['compile', 'test'])
  * Additional exposed command
  */
 gulp.task('view-tests', ['compile'], function () {
-  return gulp.src(paths.testSourceFilesPath)
-    .pipe(watch(paths.testSourceFilesPath))
-    .pipe(jasmineBrowser.specRunner())
-    .pipe(jasmineBrowser.server({port: 8888}))
+  return gulp.src(paths.testSourceFilesPath).
+  pipe(watch(paths.testSourceFilesPath)).
+  pipe(jasmineBrowser.specRunner()).
+  pipe(jasmineBrowser.server({ port: 8888 }))
 })
 
 gulp.task('watchSrc',
   function () {
-    gulp.watch(path.resolve(paths.mainSource,'./js/*.js'),['compile'])
+    gulp.watch(path.resolve(paths.mainSource, './js/*.js'), ['compile'])
   }
 )

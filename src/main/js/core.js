@@ -11,9 +11,9 @@
     var exportedUtil = {}
     var dependencyChecker
     var dependencies = {
-      'underscore': {
+      'lodash': {
         checkFn: function () {
-          return (typeof _ === 'function')
+          return _.isObject(_)
         }
       }
     }
@@ -24,8 +24,8 @@
           dependencyChecker = {
             check: function (dependencies) {
               var errors = []
-              _.each(dependencies, function (dependency, key) {
-                if (typeof dependency.checkFn === 'function') {
+              _.forEach(dependencies, function (dependency, key) {
+                if (_.isFunction(dependency.checkFn)) {
                   var checkResult = dependency.checkFn.call()
                   if (!checkResult) {
                     errors.push('Dependency "' + key + '" is not available')
@@ -34,7 +34,7 @@
                     dependency.postFn()
                   }
                 }
-              }, this)
+              })
               return errors
             }
           }
@@ -65,9 +65,8 @@
             ) ||
             // compare primitive string,number,boolean primitive type
             (
-              (_.isString(type) &&
-                ['string', 'number', 'boolean'].indexOf(type) !== -1) &&
-              (typeof value).toLowerCase() === type
+              (_.isString(type) && _.includes(['string', 'number', 'boolean'], type)) &&
+              _.lowerCase(typeof value) === type
             ) ||
             // compare primitive function type
             (
@@ -76,7 +75,7 @@
             ) ||
             // compare primitive object
             (
-              type === 'object' && (typeof value).toLowerCase() === 'object' &&
+              type === 'object' && _.lowerCase(typeof value) === 'object' &&
               !(value instanceof RootType)
             ) ||
             // compare class type
@@ -101,35 +100,33 @@
               _.pick(
                 sObj, _.keys(dObj)
               ),
-              _.isFunction(pickFn) ? pickFn : function (val, key) {
+              _.isFunction(pickFn) ? pickFn : function (val) {
                 return val
               }
             )
           )
         }
         commonUtil.asArray = function (value) {
-          return _.isArray(value) ? value : value.split(',')
+          return _.isArray(value) ? value : _.split(value, ',')
         }
         methodUtil = {
           getInfoFromDeclaredFunction: function (func) {
             var funcInfo = {}
             if (_.isFunction(func)) {
               var params = []
-              var sourceCode = func.toString().split('{')[0].trim()
+              var sourceCode = _.trim(_.split(func.toString(), '{')[0])
               var pattern = /function\s*(\w*)\s*\(([\s|\S]*)\)/i
               var results = pattern.exec(sourceCode)
               var funcName = func.name || results[1]
               var paramString = !_.isNull(results) && results[2]
               if (paramString) {
-                var parameters = paramString.split(',')
-                _.each(parameters, function (parameter) {
-                  params.push(
-                    {
-                      name: parameter.trim(),
-                      type: 'any'
-                    }
-                  )
-                }, this)
+                var parameters = _.split(paramString, ',')
+                params = _.map(parameters, function (parameter) {
+                  return {
+                    name: _.trim(parameter),
+                    type: 'any'
+                  }
+                })
               }
               funcInfo.name = funcName
               funcInfo.params = params
@@ -141,7 +138,7 @@
             }
           },
           hasMethod: function (method, tempMethods) {
-            _.some(tempMethods, function (tMethod) {
+            return _.some(tempMethods, function (tMethod) {
               return methodUtil.checkMethod(method, tMethod)
             })
           },
@@ -196,7 +193,7 @@
           if (_.isEmpty(type)) {
             return 'any'
           } else if (
-            (_.isString(type) && vType.indexOf(type) !== -1) ||
+            (_.isString(type) && _.includes(vType, type)) ||
             (type.isCustomIf || type.isCustomClass)
           ) {
             return type
@@ -327,15 +324,15 @@
           beforeProcessAllItems: function (metaData) {
             if (_.isObject(metaData) && !_.isArray(metaData)) {
               var methods = []
-              _.each(metaData, function (eachMetaInfo, key) {
+              _.forEach(metaData, function (eachMetaInfo, key) {
                 if (_.isArray(eachMetaInfo)) {
-                  _.each(eachMetaInfo, function (subInfo) {
-                    methods.push(processMethodInfoWithKey(subInfo, key))
-                  }, this)
+                  methods = _.map(eachMetaInfo, function (subInfo) {
+                    return processMethodInfoWithKey(subInfo, key)
+                  })
                 } else {
                   methods.push(processMethodInfoWithKey(eachMetaInfo, key))
                 }
-              }, this)
+              })
               return methods
             } else {
               return metaData
@@ -424,7 +421,7 @@
 
               function processEachSrcMetaElement (eachSrcMetaInfo) {
                 var eachCleanSrcMetaInfo = {}
-                _.each(nodeRule.childElements,
+                _.forEach(nodeRule.childElements,
                   function (elementRule, elementName) {
                     if (hookCalls[hookBeforeProcessEachItem]) {
                       eachSrcMetaInfo = hookCalls[hookBeforeProcessEachItem](
@@ -437,7 +434,7 @@
                       elementName,
                       eachSrcMetaInfo
                     )
-                  }, this)
+                  })
                 return eachCleanSrcMetaInfo
               }
 
@@ -448,13 +445,13 @@
                 hookProcessEachObjectKeyElement
               ]
               var hookCalls = {}
-              _.each(hooks, function (hook) {
+              _.forEach(hooks, function (hook) {
                 var hookFunc
                 hookCalls[hook] =
                   ((hookFunc = nodeRule[hook]) && _.isFunction(hookFunc) &&
                     hookFunc
                   ) || undefined
-              }, this)
+              })
               if (srcMetaForRule === undefined) {
                 return undefined
               }
@@ -494,7 +491,7 @@
                 if (nodeRule.isMultiple) {
                   nodeValue = []
                   if (_.isArray(srcMetaForRule)) {
-                    _.each(srcMetaForRule,
+                    _.forEach(srcMetaForRule,
                       function (eachElementInfo) {
                         var elementInfo
                         var hookCall
@@ -508,24 +505,24 @@
                             processEachSrcMetaElement(elementInfo)
                           )
                         }
-                      },
-                      this
+                      }.bind(this)
                     )
                   } else {
-                    _.each(srcMetaForRule, function (eachElementInfo, key) {
-                      var elementInfo
-                      var hookCall
-                      if ((hookCall = hookCalls[hookProcessEachObjectKeyElement])) {
-                        elementInfo = hookCall.call(this, key, eachElementInfo)
-                      } else {
-                        elementInfo = eachElementInfo
-                      }
-                      if (!_.isUndefined(elementInfo)) {
-                        nodeValue.push(
-                          processEachSrcMetaElement(elementInfo)
-                        )
-                      }
-                    }, this)
+                    _.forEach(srcMetaForRule, function (eachElementInfo, key) {
+                        var elementInfo
+                        var hookCall
+                        if ((hookCall = hookCalls[hookProcessEachObjectKeyElement])) {
+                          elementInfo = hookCall.call(this, key, eachElementInfo)
+                        } else {
+                          elementInfo = eachElementInfo
+                        }
+                        if (!_.isUndefined(elementInfo)) {
+                          nodeValue.push(
+                            processEachSrcMetaElement(elementInfo)
+                          )
+                        }
+                      }.bind(this)
+                    )
                   }
                 } else {
                   nodeValue = processEachSrcMetaElement(srcMetaForRule)
@@ -546,16 +543,15 @@
         }
       }
       var initRootType = function () {
+        // eslint-disable-next-line lodash/prefer-noop
         RootType = function () {}
       }
       var initXFace = function () {
         function getMethods (face) {
           var methods = []
-          _.each(face.methods, function (method) {
-            methods.push(method)
-          })
+          methods = _.map(face.methods)
           if (_.isArray(face.parentIfs)) {
-            _.each(face.parentIfs, function (parentIf) {
+            _.forEach(face.parentIfs, function (parentIf) {
               methods = _.union(methods, getMethods(parentIf))
             })
           }
@@ -568,11 +564,9 @@
           this.parentIfs = parentInfo
           this.isCustomIf = true
         }
-        XFace.prototype = Object.create(RootType)
+        XFace.prototype = _.create(RootType)
         XFace.prototype.getValue = function (propName) {
-          var searchResult = _.find(this.props, function (propInfo) {
-            return propInfo.name === propName
-          })
+          var searchResult = _.find(this.props, [name, propName])
           if (searchResult) {
             return searchResult.defaultValue
           } else {
@@ -615,7 +609,7 @@
           var faces = classRef._meta.implements
           var errors = []
           if (!_.isEmpty(faces)) {
-            _.each(faces, function (faceRef) {
+            _.forEach(faces, function (faceRef) {
               var validationError = clsValidator._validateClassFaceImplementation(
                 classRef, faceRef)
               if (!_.isEmpty(validationError)) {
@@ -629,7 +623,7 @@
           var faceMethods = faceRef.getMethods()
           var classMethods = classRef._meta.classInfo.methods
           var errors = []
-          _.every(
+          _.forEach(
             faceMethods,
             function (faceMethodInfo) {
               if (!_.find(
@@ -681,7 +675,7 @@
             if (parentClass && parentClass.isCustomClass && parentClass._meta) {
               addProperties(parentClass._meta)
             }
-            _.each(metaInfo.props, function (propInfo) {
+            _.forEach(metaInfo.props, function (propInfo) {
               propertyTypeInfo[propInfo.name] = propInfo.type
               clsPropertyUtil.assignPropertyValue(propInfo, properties,
                 allNonSharedValueProperties)
@@ -693,11 +687,11 @@
             allProperties = getAllProperties()
           } else {
             properties = _.clone(allProperties)
-            _.each(allNonSharedValueProperties, function (propInfo) {
+            _.forEach(allNonSharedValueProperties, function (propInfo) {
               clsPropertyUtil.assignPropertyValue(propInfo, properties)
             })
           }
-          _.each(properties, function (propertyValue, key) {
+          _.forEach(properties, function (propertyValue, key) {
             var cachedPropertyValue
             var valueType = propertyTypeInfo[key]
             if (!_.has(obj, key)) {
@@ -712,7 +706,7 @@
                   if (commonUtil.checkValueType(value, valueType)) {
                     cachedPropertyValue = value
                   } else {
-                    var valueTypeOfValue = (typeof value).toLowerCase()
+                    var valueTypeOfValue = _.lowerCase(typeof value)
                     var exTypeName =
                       (_.isString(valueType) && valueType) ||
                       (_.isFunction(valueType) && valueType.isCustomClass &&
@@ -783,7 +777,7 @@
                 }
               })
             }
-          }, this)
+          })
         }
       }
       var clsMethodUtil = {
@@ -812,7 +806,7 @@
         },
         makeMethodMap: function (methodsInfo) {
           var map = {}
-          _.each(methodsInfo, function (methodInfo) {
+          _.forEach(methodsInfo, function (methodInfo) {
             var methodNameIndex
             // assign empty object if the method name property is not assigned yet
             // the key will be property length
@@ -836,7 +830,7 @@
             } else {
               methodNameIndex[0] = methodInfo.method
             }
-          }, this)
+          })
           return map
         },
         findMethodFromParentClass: function (
@@ -877,7 +871,7 @@
           if (_.isFunction(paramMethods)) {
             result.method = paramMethods
           } else if (_.isArray(paramMethods)) {
-            _.each(paramMethods, function (paramMethod) {
+            _.forEach(paramMethods, function (paramMethod) {
               var paramsInfo = paramMethod.params
               // used for determining the fully match  after checking every parameter
               var isMatched
@@ -889,7 +883,7 @@
               if (isMethodFound) {
                 return
               }
-              _.each(paramsInfo, function (paramInfo, paramIndex) {
+              _.forEach(paramsInfo, function (paramInfo, paramIndex) {
                 var rawParam = rawParams[paramIndex]
                 if (!continueCheck) {
                   return
@@ -903,7 +897,7 @@
                     (paramIndex + 1) +
                     ' is not matched with expected parameter type'
                 }
-              }, this)
+              })
               if (isMatched) {
                 result.method = paramMethod.method
                 isMethodFound = true
@@ -992,9 +986,9 @@
             }
           }
           methodMap = {}
-          _.each(methodContainerType, function (value) {
+          _.forEach(methodContainerType, function (value) {
             methodMap[value] = {}
-          }, this)
+          })
 
           // populate constructor methods
           methodMap[methodContainerType.methodTypeConstruct] = clsMethodUtil.makeMethodMap(
@@ -1017,7 +1011,7 @@
               throw Error('Property name is not found')
             }
           }
-          _.each(metaStaticPropsInfo, function (propInfo) {
+          _.forEach(metaStaticPropsInfo, function (propInfo) {
             XClass._statics[propInfo.name] = _.isArray(propInfo.defaultValue)
               ? _.clone(propInfo.defaultValue) : propInfo.defaultValue
           })
@@ -1027,7 +1021,7 @@
           var metaStaticMethodsInfo = cleanMetaInfo.staticMethods
           methodMap[methodContainerType.methodTypeStatic] = clsMethodUtil.makeMethodMap(
             metaStaticMethodsInfo)
-          _.each(metaStaticMethodsInfo, function (methodInfo) {
+          _.forEach(metaStaticMethodsInfo, function (methodInfo) {
             XClass[methodInfo.name] = (function (pMethodInfo) {
               return function () {
                 var searchResult = clsMethodUtil.getMethodFromMap(
@@ -1048,12 +1042,12 @@
           // Define inheritance
           if (!_.isEmpty(parentClass)) {
             if (parentClass !== Error) {
-              XClass.prototype = Object.create(parentClass.prototype)
+              XClass.prototype = _.create(parentClass.prototype)
             } else {
-              XClass.prototype = Object.create(Error.prototype)
+              XClass.prototype = _.create(Error.prototype)
             }
           } else {
-            XClass.prototype = Object.create(RootType.prototype)
+            XClass.prototype = _.create(RootType.prototype)
           }
 
           XClass.prototype._callParent = function () {
@@ -1064,8 +1058,7 @@
             var lastMethodCallInfo = this.__runtime.lastMethodCallInfo
             var caller = arguments.callee.caller.caller
             var args = arguments
-            if (arguments.length > 0 && typeof arguments[0].callee ===
-              'function') {
+            if (arguments.length > 0 && _.isFunction(arguments[0].callee)) {
               args = arguments[0]
             }
             if (caller.isCustomClass) {
@@ -1105,7 +1098,7 @@
           var metaMethodsInfo = cleanMetaInfo.methods
           methodMap[methodContainerType.methodTypeInstance] = clsMethodUtil.makeMethodMap(
             metaMethodsInfo)
-          _.each(metaMethodsInfo, function (methodInfo) {
+          _.forEach(metaMethodsInfo, function (methodInfo) {
             XClass.prototype[methodInfo.name] = (function (pMethodInfo) {
               var fn = function () {
                 var searchResult = clsMethodUtil.getMethodFromMap(
@@ -1141,7 +1134,7 @@
 
           // add newInstance method
           XClass.newInstance = function () {
-            var instance = Object.create(XClass.prototype)
+            var instance = _.create(XClass.prototype)
             XClass.apply(instance, arguments)
             return instance
           }
@@ -1209,17 +1202,11 @@
       }
 
       root.isCustomClass = function (cls) {
-        if (cls && cls.isCustomClass) {
-          return true
-        }
-        return false
+        return cls && cls.isCustomClass
       }
 
       root.isCustomIf = function (customIf) {
-        if (customIf && customIf.isCustomIf) {
-          return true
-        }
-        return false
+        return customIf && customIf.isCustomIf
       }
 
       root.util = (function () {
@@ -1232,7 +1219,7 @@
         throw new Error('xwebjs only works when _x is used as a global')
       }
       root.isLangCore = true
-      if (typeof define === 'function' && define.amd) {
+      if (_.isFunction(define) && define.amd) {
         define('_x', [], function () {
           return root
         })

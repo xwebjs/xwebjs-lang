@@ -67,9 +67,6 @@
       })()
     }
 
-    /**
-     * @class XModule
-     */
     function enableModule () {
       var metaExtraction = {
         content: function (srcInfo) {
@@ -107,20 +104,23 @@
           errors.push('XModule meta info must be object type:' + info)
         }
         info.content = content
-        _.each(metaExtraction, function (metaExtractor, key, obj) {
+        _.forEach(metaExtraction, function (metaExtractor, key, obj) {
           var extractionResult = metaExtractor(info)
           if (extractionResult.errors.length === 0) {
             metaInfo[key] = extractionResult.result
           } else {
             errors.push(extractionResult.errors.join('\n'))
           }
-        }, this)
+        })
         return {
           metaInfo: metaInfo,
           errors: errors
         }
       }
 
+      /**
+       * @class XModule
+       */
       XModule = _x.createCls(
         {
           props: {
@@ -212,17 +212,15 @@
       root.defineModule = XModule.defineModule
     }
 
-    /**
-     * @class XPackage
-     */
     function enablePackage () {
+      /**
+       * @class XPackage
+       */
       XPackage = _x.createCls(
         {
           props: {
             modules: {},
             packages: {}
-          },
-          construct: function () {
           },
           methods: {
             hasModule: function (moduleName) {
@@ -266,9 +264,6 @@
       )
     }
 
-    /**
-     * @class XModuleContext
-     */
     function enableModuleContext () {
       /**
        * @summary
@@ -404,15 +399,11 @@
       function validateAndAdjustArguments (args, fn) {
         var newArgs = []
         var functionInfo = _x.util.getInfoFromDeclaredFunction(fn)
-        _.each(functionInfo.params,
+        _.forEach(functionInfo.params,
           function (param, index) {
             var findIndex = _.findIndex(
               args, function (arg) {
-                if (arg.getModuleContextPath().indexOf(param.name) !== -1) {
-                  return true
-                } else {
-                  return false
-                }
+                return _.includes(arg.getModuleContextPath(), param.name)
               }
             )
             if (findIndex !== -1) {
@@ -435,13 +426,12 @@
        * @private
        * @instance
        * @memberOf! XModuleContext
-       * @param packagePath
-       * @param moduleName
        * @returns {string} - file resource uri
+       * @param modulePath
        */
       function generateRemoteModuleFilePath (modulePath) {
         return this.contextConfiguration.loader.basePath + '/' +
-          modulePath.replace(/\./g, '/') + '.js'
+          _.replace(modulePath, /\./g, '/') + '.js'
       }
 
       /**
@@ -453,12 +443,12 @@
        * @private
        * @static
        * @method
-       * @param moduleFilePaths
        * @memberOf! XModuleContext#
        * @returns {Promise} - promise with the list of loadedFileContent in array
        * success or failure of promise :
        * [{ filePath:, isSuccess:,content:, errors: }]
        * progress of promise: TODO
+       * @param modulesInfo
        */
       function loadModuleFiles (modulesInfo) {
         var deferred = Q.defer()
@@ -569,10 +559,8 @@
         function prepareReturnData () {
           var infos = _.values(loadedFilesContent)
           var sortedInfos = _.sortBy(infos, 'order')
-          _.each(sortedInfos,
-            function (info, index) {
-              returnedFilesData.push(info.moduleInfo)
-            }
+          returnedFilesData.push(
+            _.map(sortedInfos, 'moduleInfo')
           )
         }
 
@@ -594,7 +582,7 @@
 
         if (!_.isEmpty(modulesInfo)) {
           modulesInfo = _x.util.asArray(modulesInfo)
-          _.each(modulesInfo,
+          _.forEach(modulesInfo,
             function (moduleInfo, index, files) {
               logger.debug(
                 'Load module info through file path:' + moduleInfo.filePath)
@@ -608,7 +596,7 @@
                 _.partial(onFileLoadFail, moduleInfo.fullPath),
                 _.partial(onFileLoadProgress, moduleInfo.fullPath)
               )
-            }, this
+            }
           )
         } else {
           return 0
@@ -616,6 +604,9 @@
         return deferred.promise
       }
 
+      /**
+       * @class XModuleContext
+       */
       XModuleContext = _x.createCls(
         {
           construct: function () {
@@ -673,12 +664,12 @@
              */
             parseName: function (fullName) {
               if (_.isString(fullName) && !_.isEmpty(fullName)) {
-                var paths = fullName.split('.')
+                var paths = _.split(fullName, '.')
                 var moduleName
                 var packagePath = ''
                 moduleName = _.last(paths)
                 if (paths.length > 1) {
-                  packagePath = _.first(paths, paths.length - 1).join('.')
+                  packagePath = _.take(paths, paths.length - 1).join('.')
                 }
                 return {
                   packagePath: packagePath,
@@ -759,7 +750,7 @@
               var me = this
               var moduleFilePaths = []
               var loadingModules = []
-              _.each(mFilePaths,
+              _.forEach(mFilePaths,
                 function (modulePath, index) {
                   var moduleLoading = me.loadingModules[modulePath]
                   if (me.hasModule(modulePath)) {
@@ -785,9 +776,9 @@
                   moduleContent)
               },
               function (packagePath, moduleName, moduleContent) {
-                var packagePaths = packagePath.split('.')
+                var packagePaths = _.split(packagePath, '.')
                 var currentPackage = this.ctxPackage
-                _.each(packagePaths, function (packageName) {
+                _.forEach(packagePaths, function (packageName) {
                   if (!_.isEmpty(packageName)) {
                     if (!currentPackage.hasPackage(packageName)) {
                       currentPackage = currentPackage.addPackage(packageName)
@@ -796,7 +787,7 @@
                         packageName)
                     }
                   }
-                }, this)
+                })
                 if (currentPackage.hasModule(moduleName)) {
                   // todo
                   // need to make decision about whehter need to throw exception later
@@ -809,7 +800,7 @@
               }
             ],
             hasPackage: function (packagePath) {
-              var packagePaths = packagePath.split('.')
+              var packagePaths = _.split('.')
               var currentPackage = this.ctxPackage
               return _.every(packagePaths, function (eachPackagePath) {
                 if (_.has(currentPackage.packages, eachPackagePath)) {
@@ -818,21 +809,21 @@
                 } else {
                   return false
                 }
-              }, this)
+              })
             },
             getRootPackage: function (packagePath) {
               if (_.isEmpty(packagePath)) {
                 return this.ctxPackage
               }
-              var packagePaths = packagePath.split('.')
+              var packagePaths = _.split(packagePath, '.')
               var currentPackage = this.ctxPackage
-              _.each(packagePaths, function (eachPackagePath) {
+              _.forEach(packagePaths, function (eachPackagePath) {
                 if (_.has(currentPackage.packages, eachPackagePath)) {
                   currentPackage = currentPackage.packages[eachPackagePath]
                 } else {
                   throw Error('XPackage "' + packagePath + '" is not found')
                 }
-              }, this)
+              })
               return currentPackage
             },
             removeModule: [
@@ -904,9 +895,6 @@
       }
     }
 
-    /**
-     * @class XSystem
-     */
     function enableSystem () {
       /**
        * @static
@@ -939,6 +927,9 @@
         }
       }
 
+      /**
+       * @class XSystem
+       */
       XSystem = _x.createCls(
         {
           props: {
@@ -977,11 +968,8 @@
             setSystConfiguration: function (configuration) {
               _.extendOwn(this.systConfiguration, configuration)
             },
-            setSystConfigurationByKeyValue: function (key, value) {
-
-            },
             getConfigValue: function (keyPath) {
-              return _.property(keyPath.split('.'))(this.systConfiguration)
+              return _.property(_.split(keyPath, '.'))(this.systConfiguration)
             }
           }
         }
@@ -996,9 +984,6 @@
       xSystem = XSystem.newInstance()
     }
 
-    /**
-     * @class XApp
-     */
     function enableApplication () {
       function identifyAppEntryClass () {
         var entryClassNames = this.appConfiguration.entryClassNames
@@ -1014,6 +999,9 @@
         }
       }
 
+      /**
+       * @class XApp
+       */
       XApp = _x.createCls(
         {
           construct: [
@@ -1059,7 +1047,7 @@
                 this.appConfiguration, appConfig,
                 function (val, key) {
                   if (key === 'entryClassNames') {
-                    return _.isArray(val) ? val : val.split(',')
+                    return _.isArray(val) ? val : _.split(val, ',')
                   }
                   return val
                 }
