@@ -270,18 +270,18 @@
        * @instance
        * @method
        *
-       * @param moduePath
+       * @param modulePath
        */
-      function generateLoadingModulePromise (moduePath) {
+      function generateLoadingModulePromise (modulePath) {
         var me = this
         var deferred = Q.defer()
         var loadingModuleInfo = {
           status: 0,
           rawContent: null,
-          modulePath: moduePath,
+          modulePath: modulePath,
           promise: deferred.promise
         }
-        me.loadingModules[moduePath] = loadingModuleInfo
+        me.loadingModules[modulePath] = loadingModuleInfo
         loadFile.call(me, loadingModuleInfo).then(
           function (loadingModuleInfo) {
             return parseModuleContent.call(me, loadingModuleInfo)
@@ -314,14 +314,14 @@
         loadingModuleInfo.status = 1
         return loadModuleFiles.call(me, moduleFilePaths).then(
           function (modulesContent) {
-            var loadedModuleRawConent = modulesContent[0]
-            if (!loadedModuleRawConent.isSuccess) {
+            var loadedModuleRawContent = modulesContent[0]
+            if (!loadedModuleRawContent.isSuccess) {
               loadingModuleInfo.status = 5
               throw Error(
-                'Failed to load module:' + loadedModuleRawConent.modulePath)
+                'Failed to load module:' + loadedModuleRawContent.modulePath)
             }
             loadingModuleInfo.status = 2
-            loadingModuleInfo.rawContent = loadedModuleRawConent.content
+            loadingModuleInfo.rawContent = loadedModuleRawContent.content
             return loadingModuleInfo
           }
         )
@@ -554,7 +554,7 @@
         function prepareReturnData () {
           var infos = _.values(loadedFilesContent)
           var sortedInfos = _.sortBy(infos, 'order')
-          returnedFilesData.push(
+          returnedFilesData = _.union(returnedFilesData,
             _.map(sortedInfos, 'moduleInfo')
           )
         }
@@ -593,7 +593,7 @@
             }
           )
         } else {
-          return 0
+          return Q()
         }
         return deferred.promise
       }
@@ -685,7 +685,7 @@
               this.parentContext = parentCtx
             },
             setCtxConfiguration: function (configuration) {
-              _x.util.assignOwnProperty(
+              _.assign(
                 this.contextConfiguration, configuration
               )
             },
@@ -955,7 +955,7 @@
               )
             },
             setSystConfiguration: function (configuration) {
-              _.extendOwn(this.systConfiguration, configuration)
+              _.assign(this.systConfiguration, configuration)
             },
             getConfigValue: function (keyPath) {
               return _.property(_.split(keyPath, '.'))(this.systConfiguration)
@@ -1003,7 +1003,7 @@
           props: {
             appConfiguration: {
               basePath: null,
-              entryClassNames: 'mainApp'
+              entryClassNames: ''
             },
             mAppClass: null,
             mAppInstance: null,
@@ -1032,13 +1032,14 @@
               )
             },
             setAppConfiguration: function (appConfig) {
-              _x.util.assignOwnProperty(
-                this.appConfiguration, appConfig,
-                function (val, key) {
+              _.assignWith(
+                this.appConfiguration,
+                appConfig,
+                function (objValue, srcValue, key, object, source) {
                   if (key === 'entryClassNames') {
-                    return _.isArray(val) ? val : _.split(val, ',')
+                    return _.isArray(srcValue) ? srcValue : _.split(srcValue, ',')
                   }
-                  return val
+                  return srcValue
                 }
               )
             },

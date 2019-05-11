@@ -13,7 +13,7 @@ var projectFiles = {
   libFiles: [
     corePath.targetLibs + '/q.js',
     corePath.targetLibs + '/axios.js',
-    corePath.targetLibs + '/underscore.js'
+    corePath.targetLibs + '/lodash.js'
   ],
   coreSourceFiles: [
     corePath.targetJs + '/core.js',

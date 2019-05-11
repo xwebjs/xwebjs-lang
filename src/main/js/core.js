@@ -10,13 +10,13 @@
     var commonUtil, methodUtil
     var exportedUtil = {}
     var dependencyChecker
-    var dependencies = {
-      'lodash': {
-        checkFn: function () {
-          return _.isObject(_)
-        }
-      }
+
+    // eslint-disable-next-line lodash/prefer-lodash-typecheck
+    if (typeof _ !== 'function') {
+      throw new Error('Missing mandatory dependent library')
     }
+
+    var dependencies = {}
 
     function init () {
       (function () {
@@ -93,19 +93,6 @@
           }
           return result
         }
-        commonUtil.assignOwnProperty = function (dObj, sObj, pickFn) {
-          _.extendOwn(
-            dObj,
-            _.mapObject(
-              _.pick(
-                sObj, _.keys(dObj)
-              ),
-              _.isFunction(pickFn) ? pickFn : function (val) {
-                return val
-              }
-            )
-          )
-        }
         commonUtil.asArray = function (value) {
           return _.isArray(value) ? value : _.split(value, ',')
         }
@@ -165,13 +152,13 @@
       }
       var initExportedUtil = function () {
         exportedUtil.dependencyChecker = dependencyChecker
-        _.extendOwn(exportedUtil, commonUtil, methodUtil)
+        _.assign(exportedUtil, commonUtil, methodUtil)
       }
       var initRoot = function () {
         if (_.isUndefined(gRoot._x)) {
           gRoot._x = root
         } else {
-          _.extendOwn(gRoot._x, root)
+          _.assign(gRoot._x, root)
         }
       }
       var initConfiguration = function () {
@@ -231,7 +218,7 @@
             } else if (
               _.isObject(info) && info.__xConfig
             ) {
-              returnInfo = _.extendOwn(info, {
+              returnInfo = _.assign(info, {
                 name: (info && info.name) || key
               })
             } else {
@@ -292,7 +279,7 @@
             methodInfo = methodUtil.getInfoFromDeclaredFunction(info)
             methodInfo.name = key
           } else if (_.isObject(info) && !_.isArray(info)) {
-            methodInfo = _.extendOwn(
+            methodInfo = _.assign(
               info,
               {
                 name: key
@@ -322,13 +309,14 @@
         var methodRuleElements = {
           isMultiple: true,
           beforeProcessAllItems: function (metaData) {
+            var methods = []
             if (_.isObject(metaData) && !_.isArray(metaData)) {
-              var methods = []
               _.forEach(metaData, function (eachMetaInfo, key) {
                 if (_.isArray(eachMetaInfo)) {
-                  methods = _.map(eachMetaInfo, function (subInfo) {
-                    return processMethodInfoWithKey(subInfo, key)
-                  })
+                  methods = _.union(methods, _.map(eachMetaInfo, function (subInfo) {
+                      return processMethodInfoWithKey(subInfo, key)
+                    })
+                  )
                 } else {
                   methods.push(processMethodInfoWithKey(eachMetaInfo, key))
                 }
@@ -355,7 +343,7 @@
             isMultiple: false,
             childElements: {
               props: propertyRuleElements,
-              methods: _.extendOwn(
+              methods: _.assign(
                 methodRuleElements,
                 {
                   childElements: methodRuleElement
@@ -378,7 +366,7 @@
               staticProps: propertyRuleElements,
               methods: methodRuleElements,
               staticMethods: methodRuleElements,
-              construct: _.extendOwn(
+              construct: _.assign(
                 _.clone(methodRuleElements),
                 {
                   beforeProcessAllItems: function (metaData) {
@@ -566,7 +554,7 @@
         }
         XFace.prototype = _.create(RootType)
         XFace.prototype.getValue = function (propName) {
-          var searchResult = _.find(this.props, [name, propName])
+          var searchResult = _.find(this.props, ['name', propName])
           if (searchResult) {
             return searchResult.defaultValue
           } else {
@@ -715,7 +703,7 @@
                         'Interface') ||
                       'unknown'
                     var acTypeName =
-                      (_.contains(['string', 'number', 'boolean'],
+                      (_.includes(['string', 'number', 'boolean'],
                         valueTypeOfValue) && valueTypeOfValue) ||
                       (valueTypeOfValue === 'object' &&
                         (value instanceof RootType) && 'Class') ||
@@ -727,7 +715,7 @@
                         'Class type') ||
                       'unknown'
                     if (
-                      _.contains(['string', 'number', 'boolean', 'object'],
+                      _.includes(['string', 'number', 'boolean', 'object'],
                         exTypeName) &&
                       acTypeName !== exTypeName
                     ) {
@@ -1149,7 +1137,7 @@
           XClass.prototype._supportInterfaceOf = function (face) {
             function hasIf (cls) {
               if (!_.isEmpty(cls._meta.implements)) {
-                if (_.contains(cls._meta.implements, face)) {
+                if (_.includes(cls._meta.implements, face)) {
                   return true
                 } else {
                   if (!_.isEmpty(cls._meta.parentClass)) {
@@ -1219,13 +1207,7 @@
         throw new Error('xwebjs only works when _x is used as a global')
       }
       root.isLangCore = true
-      if (_.isFunction(define) && define.amd) {
-        define('_x', [], function () {
-          return root
-        })
-      } else {
-        return root
-      }
+      return root
     }
 
     init()

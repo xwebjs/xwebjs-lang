@@ -1168,7 +1168,6 @@ describe('Declare class', function () {
         expect(spyBox.methodA).toHaveBeenCalledWith(3)
       })
     })
-
   })
   describe('Create the class instance through newInstance() method', function () {
     it('for class without constructor', function () {

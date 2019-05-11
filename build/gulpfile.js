@@ -11,7 +11,7 @@ var args = require('yargs').argv
 
 var paths = {
   target: '../target',
-  targetLibs: '../libs',
+  targetLibs: '../target/libs',
   targetJs: '../target/js',
   nodeModulePath: '../node_modules',
   mainSource: '../src/main',
@@ -51,21 +51,20 @@ gulp.task('compile_app', function () {
 gulp.task('test', ['compile', 'test-codeCheck', 'test-headless'])
 
 gulp.task('test-codeCheck', function () {
-  return gulp.src([paths.mainSource + '/**/*.js']).
-  pipe(eslint()).
-  pipe(eslint.format()).
-  pipe(eslint.failAfterError())
+  return gulp.src([paths.mainSource + '/**/*.js']).pipe(eslint()).pipe(eslint.format()).pipe(eslint.failAfterError())
 })
 
 gulp.task('test-headless', ['compile'], function () {
-  return gulp.src(paths.testSourceFilesPath).
-  pipe(jasmineBrowser.specRunner({ console: true })).
-  pipe(jasmineBrowser.headless())
+  return gulp.src(paths.testSourceFilesPath).pipe(jasmineBrowser.specRunner({ console: true })).pipe(jasmineBrowser.headless())
 })
 
 gulp.task('test-on-karma', ['compile', 'test-codeCheck'], function (done) {
   new KarmaServer({
-    configFile: path.resolve('../karma.conf.js'),
+    configFile: [
+      path.resolve('../karma-shared.conf.js'),
+      path.resolve('../karma-core.conf.js'),
+      path.resolve('../karma-module-loader.conf.js')
+    ],
     singleRun: true,
   }, done).start()
 })
@@ -79,10 +78,7 @@ gulp.task('default', ['compile', 'test'])
  * Additional exposed command
  */
 gulp.task('view-tests', ['compile'], function () {
-  return gulp.src(paths.testSourceFilesPath).
-  pipe(watch(paths.testSourceFilesPath)).
-  pipe(jasmineBrowser.specRunner()).
-  pipe(jasmineBrowser.server({ port: 8888 }))
+  return gulp.src(paths.testSourceFilesPath).pipe(watch(paths.testSourceFilesPath)).pipe(jasmineBrowser.specRunner()).pipe(jasmineBrowser.server({ port: 8888 }))
 })
 
 gulp.task('watchSrc',
