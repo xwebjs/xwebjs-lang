@@ -68,8 +68,8 @@
 			
 			```javascript
 			var bModules,eModules
-			bModules = this.getSystemConfig("system.bootModules")
-			eModules = this.getSystemConfig("system.extModules")
+			bModules = this.getSystemConfig(test_2)
+			eModules = this.getSystemConfig(test_2)
 			```
 			
 			SystemContext takes the responsibility of loading the remote modules or module bundle into system context. Here, we need to consider: how to use the method from the parent class ModuleContext on loading modules? how to track the loading progress of each bundle / modules? and how to trigger the next step in the chain.
@@ -99,7 +99,7 @@
 				var defaultAppModule;
 				var defaultApp;
 				try{
-					defaultAppModulePath = this.getSystemConfig("system.defaultAppPath")
+					defaultAppModulePath = this.getSystemConfig(test_2)
 					defaultAppModule = this.systemCtx.getModule(defaultAppModulePath)
 					defaultApp = defaultAppModule.getClass().newInstance();
 					return defaultApp;
@@ -125,4 +125,3 @@
 5.  
 
 
- 

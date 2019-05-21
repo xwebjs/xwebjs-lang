@@ -104,7 +104,7 @@
               var sourceCode = _.trim(_.split(func.toString(), '{')[0])
               var pattern = /function\s*(\w*)\s*\(([\s|\S]*)\)/i
               var results = pattern.exec(sourceCode)
-              var funcName = func.name || results[1]
+              var funcName = _.trim(func.name) || results[1]
               var paramString = !_.isNull(results) && results[2]
               if (paramString) {
                 var parameters = _.split(paramString, ',')
@@ -115,7 +115,7 @@
                   }
                 })
               }
-              funcInfo.name = funcName
+              funcInfo.name = _.trim(funcName)
               funcInfo.params = params
               funcInfo.method = func
               return funcInfo
@@ -1206,7 +1206,8 @@
       root.noConflict = function () {
         throw new Error('xwebjs only works when _x is used as a global')
       }
-      root.isLangCore = true
+      root.features = {}
+      root.features.isLangCore = true
       return root
     }
 

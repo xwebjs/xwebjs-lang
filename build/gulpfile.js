@@ -48,7 +48,7 @@ gulp.task('compile_app', function () {
   console.log(args.appSrcPath)
 })
 
-gulp.task('test', ['compile', 'test-codeCheck', 'test-headless'])
+gulp.task('test', ['compile', 'test-headless'])
 
 gulp.task('test-codeCheck', function () {
   return gulp.src([paths.mainSource + '/**/*.js']).pipe(eslint()).pipe(eslint.format()).pipe(eslint.failAfterError())
@@ -58,7 +58,7 @@ gulp.task('test-headless', ['compile'], function () {
   return gulp.src(paths.testSourceFilesPath).pipe(jasmineBrowser.specRunner({ console: true })).pipe(jasmineBrowser.headless())
 })
 
-gulp.task('test-on-karma', ['compile', 'test-codeCheck'], function (done) {
+gulp.task('test-on-karma', ['compile'], function (done) {
   new KarmaServer({
     configFile: [
       path.resolve('../karma-shared.conf.js'),
@@ -78,7 +78,8 @@ gulp.task('default', ['compile', 'test'])
  * Additional exposed command
  */
 gulp.task('view-tests', ['compile'], function () {
-  return gulp.src(paths.testSourceFilesPath).pipe(watch(paths.testSourceFilesPath)).pipe(jasmineBrowser.specRunner()).pipe(jasmineBrowser.server({ port: 8888 }))
+  return gulp.src(
+    paths.testSourceFilesPath).pipe(watch(paths.testSourceFilesPath)).pipe(jasmineBrowser.specRunner()).pipe(jasmineBrowser.server({ port: 8888 }))
 })
 
 gulp.task('watchSrc',

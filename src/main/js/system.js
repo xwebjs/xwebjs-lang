@@ -8,7 +8,7 @@
     var dependencies = {
       'core': {
         checkFn: function () {
-          return _x && _x.isLangCore
+          return _x && _x.features.isLangCore
         }
       }
     }
@@ -930,17 +930,17 @@
           methods: {
             init: function () {
               var me = this
-              var bootLibs, extendedLibs
+              var bootModules, extModules
 
               return Q.when(loadDefaultConfiguration()).then(
                 function () {
-                  bootLibs = me.getConfigValue('systemInfo.bootLibPath')
-                  return Q.when(me.loadLibs(bootLibs))
+                  bootModules = me.getConfigValue('systemInfo.bootModules')
+                  return Q.when(me.loadLibs(bootModules))
                 }
               ).then(
                 function () {
-                  extendedLibs = me.getConfigValue('systemInfo.extLibPath')
-                  return Q.when(me.loadLibs(extendedLibs))
+                  extModules = me.getConfigValue('systemInfo.extModules')
+                  return Q.when(me.loadLibs(extModules))
                 }
               ).then(
                 function () {
@@ -965,7 +965,7 @@
         , XModuleContext
       )
 
-      // mount API to the root
+      // mount API to the test_1
       root.getSystem = function () {
         return xSystem
       }
@@ -982,9 +982,9 @@
             false)
           return firstModule.getClass()
         } else {
-          throw Error(
+          throw new Error(
             'Unable to identify application entry class because appConfiguration.' +
-            'entryClassNames are invalids')
+            'entryClassNames can not be empty')
         }
       }
 
@@ -1056,7 +1056,7 @@
         , XModuleContext
       )
 
-      // mount API to root
+      // mount API to test_1
       root.createApp = function () {
         return XApp.createAppInstance.call(arguments)
       }
@@ -1074,7 +1074,7 @@
     }
 
     function postProcess () {
-      root.feature.isSystemEnabled = true
+      root.features.isSystemEnabled = true
     }
 
     var checkResult = _x.util.dependencyChecker.check(dependencies)

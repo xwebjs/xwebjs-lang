@@ -4,20 +4,24 @@ describe('System module loader', function () {
     jasmine.addMatchers(objectMatcher)
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 50000
   })
-  it('Load modules from web server', function (done) {
+  xit('Load system boot modules from web server', function (done) {
     // @Given
     var system = _x.getSystem()
     system.setSystConfiguration({
       systemInfo: {
         loader: {
-          basePath: '/system'
+          basePath: '/test2/system/',
+          bootPath: '/boot/',
+          extPath: '/ext/'
         },
-        bootLibPath: '',
-        extLibPath: ''
+        bootModulePath: [
+          'Core'
+        ],
+        extPath: []
       },
       mainAppInfo: {
         loader: {
-          basePath: '/app'
+          basePath: '/test2/app/'
         },
         entryClassNames: 'MainApp'
       }
