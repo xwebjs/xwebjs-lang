@@ -2,26 +2,27 @@ describe('System module loader', function () {
   beforeEach(function () {
     // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
-    jasmine.DEFAULT_TIMEOUT_INTERVAL = 50000
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 500000
   })
-  xit('Load system boot modules from web server', function (done) {
+  it('Load system boot modules from web server', function (done) {
     // @Given
     var system = _x.getSystem()
-    system.setSystConfiguration({
+    system.setConfiguration({
       systemInfo: {
         loader: {
-          basePath: '/test2/system/',
-          bootPath: '/boot/',
-          extPath: '/ext/'
+          bootPath: '/test2/system//boot',
+          extPath: '/test2/system/ext'
         },
-        bootModulePath: [
+        bootModules: [
           'Core'
         ],
-        extPath: []
+        extModules: [
+          'Ext'
+        ]
       },
       mainAppInfo: {
         loader: {
-          basePath: '/test2/app/'
+          basePath: '/test2/app'
         },
         entryClassNames: 'MainApp'
       }

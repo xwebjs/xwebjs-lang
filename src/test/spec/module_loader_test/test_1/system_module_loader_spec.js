@@ -7,7 +7,7 @@ describe('System module loader', function () {
   it('Load app modules from web server', function (done) {
     // @Given
     var system = _x.getSystem()
-    system.setSystConfiguration({
+    system.setConfiguration({
       systemInfo: {
         loader: {},
         bootModulePath: [
@@ -17,7 +17,7 @@ describe('System module loader', function () {
       },
       mainAppInfo: {
         loader: {
-          basePath: '/test1/app/'
+          basePath: '/test1/app'
         },
         entryClassNames: 'MainApp'
       }

@@ -1,5 +1,10 @@
 /* eslint-disable no-unused-vars,spaced-comment */
 (function () {
+    var MODULE_TYPE = {
+      APP_MODULE: 'APP_MODULE',
+      BOOT_MODULE: 'BOOT_MODULE',
+      EXT_MODULE: 'EXT_MODULE'
+    }
     var root = _x
     var XModule, XPackage, XModuleContext, XApp, XSystem
     var xSystem
@@ -272,12 +277,13 @@
        *
        * @param modulePath
        */
-      function generateLoadingModulePromise (modulePath) {
+      function generateLoadingModulePromise (modulePath, moduleType) {
         var me = this
         var deferred = Q.defer()
         var loadingModuleInfo = {
           status: 0,
           rawContent: null,
+          moduleType: moduleType,
           modulePath: modulePath,
           promise: deferred.promise
         }
@@ -306,8 +312,11 @@
         var moduleFilePaths = []
         moduleFilePaths.push(
           {
-            filePath: generateRemoteModuleFilePath.call(me,
-              loadingModuleInfo.modulePath),
+            filePath: generateRemoteModuleFilePath.call(
+              me,
+              loadingModuleInfo.modulePath,
+              me.moduleType
+            ),
             fullPath: loadingModuleInfo.modulePath
           }
         )
@@ -416,7 +425,7 @@
        * @summary
        * generate remote module path based on the module context configuration,
        * and the generated path is the URI which contains the protocol
-       * at the begining
+       * at the beginning
        *
        * @private
        * @instance
@@ -424,9 +433,21 @@
        * @returns {string} - file resource uri
        * @param modulePath
        */
-      function generateRemoteModuleFilePath (modulePath) {
-        return this.contextConfiguration.loader.basePath + '/' +
-          _.replace(modulePath, /\./g, '/') + '.js'
+      function generateRemoteModuleFilePath (modulePath, moduleType) {
+        var path = ''
+        var systemB
+        switch (moduleType) {
+          case MODULE_TYPE.BOOT_MODULE:
+            path = xSystem.getConfigValue('loader.bootPath')
+            break
+          case MODULE_TYPE.EXT_MODULE:
+            path = xSystem.getConfigValue('loader.extPath')
+            break
+          case MODULE_TYPE.APP_MODULE:
+            path = this.getConfigValue('loader.basePath')
+            break
+        }
+        return path + '/' + _.replace(modulePath, /\./g, '/') + '.js'
       }
 
       /**
@@ -603,19 +624,30 @@
        */
       XModuleContext = _x.createCls(
         {
-          construct: function () {
-            this.ctxPackage = XPackage.newInstance()
-          },
+          construct: [
+            function (moduleType) {
+              this.ctxPackage = XPackage.newInstance()
+              this.moduleType = moduleType
+            },
+            function (parentCtx, moduleType) {
+              this.ctxPackage = XPackage.newInstance()
+              this.parentContext = parentCtx
+              this.moduleType = moduleType
+            }
+          ],
           props: {
             ctxPackage: {
               __xConfig: true,
               type: XPackage
             },
+            moduleType: null,
             parentContext: null,
             loadingModules: {},
             contextConfiguration: {
               loader: {
-                basePath: ''
+                basePath: '',
+                bootPath: '',
+                extPath: ''
               }
             }
           },
@@ -639,16 +671,29 @@
               },
               function (configs) {
                 var ctx = new XModuleContext()
-                ctx.setCtxConfiguration(configs)
+                ctx.setConfiguration(configs)
                 return ctx
               },
               function (parentCtx, configs) {
                 var ctx = new XModuleContext()
-                ctx.setCtxConfiguration(configs)
+                ctx.setConfiguration(configs)
                 ctx.setParentContext(parentCtx)
                 return ctx
               }
             ],
+            /**
+             * @memberOf XModuleContext#
+             * @public
+             * @static
+             * @method
+             * @param context
+             * @param libFiles
+             * @param moduleType
+             * @returns PromiseLike<ModuleContext>
+             */
+            loadContextModules: function (context, libFiles) {
+              return context.loadModules(libFiles)
+            },
             /**
              * @memberOf XModuleContext#
              * @public
@@ -684,31 +729,25 @@
             setParentContext: function (parentCtx) {
               this.parentContext = parentCtx
             },
-            setCtxConfiguration: function (configuration) {
+            setConfiguration: function (config) {
               _.assign(
-                this.contextConfiguration, configuration
+                this.configuration,
+                config,
+                _.pick(
+                  config, _.keys(this.constructor)
+                )
               )
+            },
+            getConfigValue: function (keyPath) {
+              return _.property(_.split(keyPath, '.'))(this.configuration)
             },
             getContextPackage: function () {
               return this.ctxPackage
             },
             /**
-             * @memberOf XModuleContext#
-             * @public
-             * @instance
-             * @method
-             * @param libFiles
-             * @returns {*|PromiseLike}
-             */
-            loadLibs: function (libFiles) {
-              var me = this
-              return Q.when(loadModuleFiles(libFiles)).then(
-                function (files) {
-                  return files
-                }
-              )
-            },
-            /**
+             * @summary
+             * Load the modules from physical into context
+             *
              * @memberOf XModuleContext#
              * @public
              * @instance
@@ -735,29 +774,40 @@
                 )
               }
             ],
-            loadModules: function (mFilePaths) {
-              var me = this
-              var moduleFilePaths = []
-              var loadingModules = []
-              _.forEach(mFilePaths,
-                function (modulePath, index) {
-                  var moduleLoading = me.loadingModules[modulePath]
-                  if (me.hasModule(modulePath)) {
-                    loadingModules.push(me.getModule(modulePath))
-                  } else if (
-                    moduleLoading &&
-                    (moduleLoading.status === 1 || moduleLoading.status === 2)
-                  ) {
-                    loadingModules.push(moduleLoading.promise)
-                  } else {
-                    loadingModules.push(
-                      generateLoadingModulePromise.call(me, modulePath)
-                    )
-                  }
+            /**
+             * @memberOf XModuleContext#
+             * @public
+             * @instance
+             * @method
+             * @param mFilePaths modules file path
+             * @param moduleType
+             * @returns {*|PromiseLike<T | never>|Promise<T | never>}
+             */
+            loadModules:
+              [
+                function (mFilePaths) {
+                  var me = this
+                  var loadingModules = []
+                  _.forEach(mFilePaths,
+                    function (modulePath, index) {
+                      var moduleLoading = me.loadingModules[modulePath]
+                      if (me.hasModule(modulePath)) {
+                        loadingModules.push(me.getModule(modulePath))
+                      } else if (
+                        moduleLoading &&
+                        (moduleLoading.status === 1 || moduleLoading.status === 2)
+                      ) {
+                        loadingModules.push(moduleLoading.promise)
+                      } else {
+                        loadingModules.push(
+                          generateLoadingModulePromise.call(me, modulePath)
+                        )
+                      }
+                    }
+                  )
+                  return Q.all(loadingModules)
                 }
-              )
-              return Q.all(loadingModules)
-            },
+              ],
             register: [
               function (fullName, moduleContent) {
                 var pathInfo = XModuleContext.parseName(fullName)
@@ -895,9 +945,15 @@
         //todo
       }
 
+      /**
+       * @memberOf XSystem
+       *
+       * @private
+       * @instance
+       * @returns {*|PromiseLike<T | never>|Promise<T | never>}
+       */
       function startDefaultApp () {
-        var mainAppInfo = this.getConfigValue('mainAppInfo')
-        var systemDefaultApp = XApp.newInstance(mainAppInfo)
+        var systemDefaultApp = XApp.newInstance(this.mainAppConfiguration)
         if (!_.isNull(systemDefaultApp)) {
           return systemDefaultApp.initialize().then(
             function (systemDefaultApp) {
@@ -922,28 +978,47 @@
       XSystem = _x.createCls(
         {
           props: {
-            systConfiguration: {}
+            configuration: {},
+            mainAppConfiguration: {}
           },
-          construct: function () {
-            this._callParent('xSystem')
+          staticProps: {
+            bootContext: null,
+            extContext: null
           },
           methods: {
+            setConfiguration: function (configuration) {
+              _.assign(this.configuration, configuration.systemInfo)
+              _.assign(this.mainAppConfiguration, configuration.mainAppInfo)
+            },
+            getConfigValue: function (keyPath) {
+              return _.property(_.split(keyPath, '.'))(this.configuration)
+            },
             init: function () {
               var me = this
               var bootModules, extModules
+              var bootContext, extContext
+
+              bootContext = XModuleContext.newInstance(MODULE_TYPE.BOOT_MODULE)
+              extContext = XModuleContext.newInstance(bootContext, MODULE_TYPE.EXT_MODULE)
 
               return Q.when(loadDefaultConfiguration()).then(
                 function () {
-                  bootModules = me.getConfigValue('systemInfo.bootModules')
-                  return Q.when(me.loadLibs(bootModules))
+                  bootModules = me.getConfigValue('bootModules')
+                  return XModuleContext.loadContextModules(
+                    bootContext, bootModules
+                  )
                 }
               ).then(
                 function () {
-                  extModules = me.getConfigValue('systemInfo.extModules')
-                  return Q.when(me.loadLibs(extModules))
+                  me.$.bootContext = bootContext
+                  extModules = me.getConfigValue('extModules')
+                  return XModuleContext.loadContextModules(
+                    extContext, extModules
+                  )
                 }
               ).then(
                 function () {
+                  me.$.extContext = extContext
                   return startDefaultApp.call(me)
                 }
               ).catch(
@@ -953,16 +1028,9 @@
                   throw Error(errors)
                 }
               )
-            },
-            setSystConfiguration: function (configuration) {
-              _.assign(this.systConfiguration, configuration)
-            },
-            getConfigValue: function (keyPath) {
-              return _.property(_.split(keyPath, '.'))(this.systConfiguration)
             }
           }
         }
-        , XModuleContext
       )
 
       // mount API to the test_1
@@ -973,13 +1041,18 @@
       xSystem = XSystem.newInstance()
     }
 
+    /**
+     * @class XApp
+     */
     function enableApplication () {
       function identifyAppEntryClass () {
-        var entryClassNames = this.appConfiguration.entryClassNames
+        var entryClassNames = _x.util.asArray(this.configuration.entryClassNames)
         var firstModule
         if (entryClassNames.length > 0) {
-          firstModule = this.getModule(this.appConfiguration.entryClassNames[0],
-            false)
+          firstModule = this.getModule(
+            entryClassNames[0],
+            false
+          )
           return firstModule.getClass()
         } else {
           throw new Error(
@@ -988,20 +1061,16 @@
         }
       }
 
-      /**
-       * @class XApp
-       */
       XApp = _x.createCls(
         {
           construct: [
             function (appConfig) {
-              this._callParent()
-              this.setAppConfiguration(appConfig)
-              this.setCtxConfiguration(appConfig)
+              this._callParent(XSystem.$.extContext, MODULE_TYPE.APP_MODULE)
+              this.setConfiguration(appConfig)
             }
           ],
           props: {
-            appConfiguration: {
+            configuration: {
               basePath: null,
               entryClassNames: ''
             },
@@ -1031,22 +1100,10 @@
                 }
               )
             },
-            setAppConfiguration: function (appConfig) {
-              _.assignWith(
-                this.appConfiguration,
-                appConfig,
-                function (objValue, srcValue, key, object, source) {
-                  if (key === 'entryClassNames') {
-                    return _.isArray(srcValue) ? srcValue : _.split(srcValue, ',')
-                  }
-                  return srcValue
-                }
-              )
-            },
             initAppContext: function () {
               var me = this
               return me.loadModules(
-                _x.util.asArray(me.appConfiguration.entryClassNames))
+                _x.util.asArray(me.configuration.entryClassNames))
             },
             start: function () {
               return this.mAppClass.main()
