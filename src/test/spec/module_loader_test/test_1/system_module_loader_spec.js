@@ -10,9 +10,7 @@ describe('System module loader', function () {
     system.setConfiguration({
       systemInfo: {
         loader: {},
-        bootModulePath: [
-          'Core'
-        ],
+        bootModulePath: [],
         extPath: []
       },
       mainAppInfo: {

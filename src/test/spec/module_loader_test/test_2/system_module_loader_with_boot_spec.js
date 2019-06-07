@@ -2,7 +2,7 @@ describe('System module loader', function () {
   beforeEach(function () {
     // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
-    jasmine.DEFAULT_TIMEOUT_INTERVAL = 500000
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
   it('Load system boot modules from web server', function (done) {
     // @Given
@@ -29,8 +29,9 @@ describe('System module loader', function () {
     })
     // @Then
     system.init().then(
-      function (defaultApp) {
-        expect(defaultApp.$.status === 'done').toBeTruthy()
+      function (mainAppClass) {
+        expect(mainAppClass.$.status === 'done').toBeTruthy()
+        expect(mainAppClass.getCollectionSize() === 100).toBeTruthy()
         done()
       },
       function (errors) {

@@ -114,6 +114,7 @@ describe('Declare class', function () {
       // @then constructor function should have been called
       expect(calledByConstructor).toHaveBeenCalledWith('a', 'b')
     })
+
     describe('Overload constructor', function () {
       it('Methods have different parameter length', function () {
         // @when
@@ -169,6 +170,32 @@ describe('Declare class', function () {
         person = new Person('a', 13, emptyCustomTypeInstance)
         // @then
         expect(spyBox.methodD).toHaveBeenCalledWith('a', 13, emptyCustomTypeInstance)
+      })
+
+      it('Call peer constructor', function () {
+        // @when
+        var Person = _x.createCls(
+          {
+            construct: [
+              function () {
+                spyBox.methodA.apply(this, arguments)
+              },
+              function (a) {
+                this._construct()
+                spyBox.methodB.apply(this, arguments)
+              },
+              function (a, b) {
+                this._construct(a)
+                spyBox.methodC.apply(this, arguments)
+              }
+            ]
+          }
+        )
+        var person = new Person('a', 'b')
+        // @then
+        expect(spyBox.methodC).toHaveBeenCalledWith('a', 'b')
+        expect(spyBox.methodB).toHaveBeenCalledWith('a')
+        expect(spyBox.methodA).toHaveBeenCalled()
       })
     })
   })
@@ -289,13 +316,13 @@ describe('Declare class', function () {
     describe('Declare instance properties', function () {
       it('Passing empty properties', function () {
         // @when
-        var Person = _x.createCls({props: {}})
+        var Person = _x.createCls({ props: {} })
         // @and
         var person = new Person()
         // @then
         expect(person).isTypeOf(Person)
         // @when
-        Person = _x.createCls({props: undefined})
+        Person = _x.createCls({ props: undefined })
         // @and
         person = new Person()
         // @then
@@ -1030,9 +1057,9 @@ describe('Declare class', function () {
         expect(spyBox.methodB).toHaveBeenCalled()
 
         circle = new Circle()
-        circle.draw({x: 20, y: 30})
+        circle.draw({ x: 20, y: 30 })
         // @expectation
-        expect(spyBox.methodC).toHaveBeenCalledWith({x: 20, y: 30})
+        expect(spyBox.methodC).toHaveBeenCalledWith({ x: 20, y: 30 })
       }
     )
     describe('support call parent method', function () {
@@ -1084,8 +1111,8 @@ describe('Declare class', function () {
         var circle = new Circle()
         circle.draw()
         expect(spyBox.methodA).toHaveBeenCalled()
-        circle.draw({x: 20, y: 30})
-        expect(spyBox.methodB).toHaveBeenCalledWith({x: 20, y: 30})
+        circle.draw({ x: 20, y: 30 })
+        expect(spyBox.methodB).toHaveBeenCalledWith({ x: 20, y: 30 })
         var moon = new Moon()
         moon.show()
         expect(spyBox.methodC).toHaveBeenCalled()
@@ -1115,33 +1142,6 @@ describe('Declare class', function () {
         )
         var circle = new Circle()
         expect(circle.name === 'circle').toBeTruthy()
-      })
-      it('throw exception if callParent method is called in wrong position of construct method', function () {
-        var Shape = _x.createCls(
-          {
-            construct: function () {
-            }
-          }
-        )
-        var Circle = _x.createCls(
-          {
-            construct: function () {
-              this.draw()
-              this._callParent()
-            },
-            methods: [
-              function draw () {
-              }
-            ]
-          },
-          Shape
-        )
-
-        try {
-          var circle = new Circle()
-        } catch (e) {
-          expect(e.message.toLowerCase()).toContain('callparent method must be called at the beginning')
-        }
       })
       it('callParent method is called with arguments', function () {
         var Shape = _x.createCls(

@@ -625,14 +625,16 @@
       XModuleContext = _x.createCls(
         {
           construct: [
-            function (moduleType) {
+            function () {
               this.ctxPackage = XPackage.newInstance()
+            },
+            function (moduleType) {
               this.moduleType = moduleType
+              this._construct()
             },
             function (parentCtx, moduleType) {
-              this.ctxPackage = XPackage.newInstance()
               this.parentContext = parentCtx
-              this.moduleType = moduleType
+              this._construct(moduleType)
             }
           ],
           props: {
@@ -652,35 +654,6 @@
             }
           },
           staticMethods: {
-            /**
-             * @public
-             * @method
-             * @name createModuleContext
-             * @memberOf XModuleContext#
-             * @static
-             * @returns {XModuleContext}
-             */
-            createModuleContext: [
-              function () {
-                return new XModuleContext()
-              },
-              function (parentCtx) {
-                var ctx = new XModuleContext()
-                ctx.setParentContext(parentCtx)
-                return ctx
-              },
-              function (configs) {
-                var ctx = new XModuleContext()
-                ctx.setConfiguration(configs)
-                return ctx
-              },
-              function (parentCtx, configs) {
-                var ctx = new XModuleContext()
-                ctx.setConfiguration(configs)
-                ctx.setParentContext(parentCtx)
-                return ctx
-              }
-            ],
             /**
              * @memberOf XModuleContext#
              * @public
@@ -946,9 +919,8 @@
       )
 
       // mount API
-      root.createModuleContext = function (parentCtx) {
-        return XModuleContext.createModuleContext.apply(XModuleContext,
-          arguments)
+      root.createModuleContext = function () {
+        return XModuleContext.newInstance(arguments)
       }
     }
 
@@ -972,17 +944,23 @@
        */
       function startDefaultApp () {
         var systemDefaultApp = XApp.newInstance(this.mainAppConfiguration)
+        this.mainAppInstance = systemDefaultApp
+        var mAppClass
         if (!_.isNull(systemDefaultApp)) {
           return systemDefaultApp.initialize().then(
-            function (systemDefaultApp) {
-              return Q.when(systemDefaultApp.main()).then(
-                function () {
-                  return systemDefaultApp
-                }
-              )
+            function (mainAppClass) {
+              mAppClass = mainAppClass
+              return Q(mainAppClass.main())
             },
             function (errors) {
-              throw Error(errors)
+              throw Error('System initialization failed: ' + errors)
+            }
+          ).then(
+            function () {
+              return mAppClass
+            },
+            function (reason) {
+              throw Error('Entry main method execution failed: ' + reason)
             }
           )
         } else {
@@ -997,7 +975,8 @@
         {
           props: {
             configuration: {},
-            mainAppConfiguration: {}
+            mainAppConfiguration: {},
+            mainAppInstance: null
           },
           staticProps: {
             bootContext: null,

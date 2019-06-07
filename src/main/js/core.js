@@ -10,6 +10,7 @@
     var commonUtil, methodUtil
     var exportedUtil = {}
     var dependencyChecker
+    var __runtime
 
     // eslint-disable-next-line lodash/prefer-lodash-typecheck
     if (typeof _ !== 'function') {
@@ -39,6 +40,15 @@
             }
           }
         }
+        var prepareRuntimeManager = function () {
+          __runtime = {
+            callTrace: [],
+            addCall: function (callInfo) {
+              __runtime.callTrace.push(callInfo)
+            }
+          }
+        }
+        prepareRuntimeManager()
         initDependencyChecker()
         var checkResult = dependencyChecker.check(dependencies)
         if (checkResult.length !== 0) {
@@ -821,8 +831,7 @@
           })
           return map
         },
-        findMethodFromParentClass: function (
-          pClass, methodName, methodType, args) {
+        findMethodFromClass: function (tClass, methodName, methodType, args) {
           var result = {
             isFound: false,
             method: null,
@@ -832,20 +841,53 @@
             methodName,
             args,
             methodType,
-            pClass._meta.methodMap
+            tClass._meta.methodMap
           )
           if (searchResult.isFound) {
             result.method = searchResult.method
             result.isFound = true
           } else {
-            if (pClass._meta.parentClass) {
-              return clsMethodUtil.findMethodFromParentClass(
-                pClass._meta.parentClass,
+            if (tClass._meta.parentClass) {
+              return clsMethodUtil.findMethodFromClass(
+                tClass._meta.parentClass,
                 methodName, methodType, args
               )
+            } else {
+              result.errors = [
+                'Method name: ' + methodName,
+                'with arguments: ' + args.toString(),
+                'with method type: ' + methodType,
+                ' can not be found'
+              ].join(' ')
             }
           }
           return result
+        },
+        executeInstanceMethod: function (targetClass, targetClassInstance, methodName, args) {
+          var executionResult
+          var methodType = methodName === 'construct'
+            ? methodContainerType.methodTypeConstruct
+            : methodContainerType.methodTypeInstance
+          var searchResult = clsMethodUtil.findMethodFromClass(
+            targetClass,
+            methodName,
+            methodType,
+            args
+          )
+          if (searchResult.isFound) {
+            clsMethodUtil.recordMethodCall('before', methodName,
+              arguments, searchResult.method, targetClassInstance, targetClass)
+            executionResult = searchResult.method.apply(targetClassInstance, args, targetClass)
+            clsMethodUtil.recordMethodCall('after', methodName,
+              arguments, searchResult.method, targetClassInstance)
+            return executionResult
+          } else {
+            if (!_.isEmpty(searchResult.errors)) {
+              throw Error('Unable to find the method because : ' + searchResult.errors)
+            } else {
+              throw Error('Unable to find the method because of unknown cause')
+            }
+          }
         },
         findMethodByComparingParameter: function (rawParams, declaredMethods) {
           var result = {
@@ -896,12 +938,29 @@
           }
           return result
         },
-        recordLastMethodCall: function (name, args, methodFn, context) {
-          context.__runtime.lastMethodCallInfo = {
+        getCurrentMethodCallInfo: function (context) {
+          return context.__runtime.currentCallInfo
+        },
+        getLastMethodCallInfo: function (context) {
+          return context.__runtime.lastCallInfo
+        },
+        recordMethodCall: function (tagName, name, args, methodFn, context, targetClass) {
+          var callInfo = {
             methodName: name,
             args: args,
-            method: methodFn
+            method: methodFn,
+            targetInstance: context,
+            targetCls: targetClass
           }
+          if (tagName === 'before') {
+            callInfo = _.assignIn(callInfo, { tagName: 'before' })
+            context.__runtime.currentCallInfo = callInfo
+          }
+          if (tagName === 'after') {
+            callInfo = _.assignIn(callInfo, { tagName: 'after' })
+            context.__runtime.lastCallInfo = callInfo
+          }
+          __runtime.addCall(callInfo)
         }
       }
       root.validateCls = function (classRef) {
@@ -968,9 +1027,11 @@
             this.$ = XClass._statics
             this.__runtime = {}
             if (searchResult.isFound) {
-              clsMethodUtil.recordLastMethodCall('construct', arguments,
+              clsMethodUtil.recordMethodCall('before', 'construct', arguments,
                 searchResult.method, this)
               searchResult.method.apply(this, arguments)
+              clsMethodUtil.recordMethodCall('after', 'construct', arguments,
+                searchResult.method, this)
             }
           }
           methodMap = {}
@@ -1038,48 +1099,30 @@
             XClass.prototype = _.create(RootType.prototype)
           }
 
+          XClass.prototype._construct = function () {
+            var callStack = __runtime.callTrace
+            var targetCls
+            if (!_.isEmpty(_.last(callStack).targetCls)) {
+              targetCls = _.last(callStack).targetCls
+            } else {
+              targetCls = this._getClassType()
+            }
+            return clsMethodUtil.executeInstanceMethod(targetCls, this, 'construct', arguments)
+          }
+
           XClass.prototype._callParent = function () {
             var methodName
             if (_.isEmpty(parentClass)) {
-              return undefined
+              throw new Error('Parent class is not found')
             }
-            var lastMethodCallInfo = this.__runtime.lastMethodCallInfo
-            var caller = arguments.callee.caller.caller
             var args = arguments
+            // while the arguments is passed as parameter, arguments[0] is the original function arguments
+            // otherwise, it will take the actual parameters passed in for callParent function
             if (arguments.length > 0 && _.isFunction(arguments[0].callee)) {
               args = arguments[0]
             }
-            if (caller.isCustomClass) {
-              methodName = 'construct'
-            } else {
-              methodName = caller._methodName
-            }
-            if (!_.isEmpty(methodName)) {
-              if (
-                methodName === 'construct' &&
-                lastMethodCallInfo.method !== arguments.callee.caller
-              ) {
-                throw Error('callParent method must be called at the beginning')
-              }
-              var methodType = methodName === 'construct'
-                ? methodContainerType.methodTypeConstruct
-                : methodContainerType.methodTypeInstance
-              var result = clsMethodUtil.findMethodFromParentClass(
-                parentClass,
-                methodName,
-                methodType,
-                args
-              )
-              if (result.isFound) {
-                return result.method.apply(this, args)
-              } else if (!_.isEmpty(result.errors)) {
-                throw Error(result.errors)
-              } else {
-                // do nothing
-              }
-            } else {
-              throw Error('Unexpected method call context')
-            }
+            methodName = clsMethodUtil.getCurrentMethodCallInfo(this).methodName
+            return clsMethodUtil.executeInstanceMethod(parentClass, this, methodName, args)
           }
 
           // populate instance methods
@@ -1087,25 +1130,11 @@
           methodMap[methodContainerType.methodTypeInstance] = clsMethodUtil.makeMethodMap(
             metaMethodsInfo)
           _.forEach(metaMethodsInfo, function (methodInfo) {
-            XClass.prototype[methodInfo.name] = (function (pMethodInfo) {
-              var fn = function () {
-                var searchResult = clsMethodUtil.getMethodFromMap(
-                  pMethodInfo.name,
-                  arguments,
-                  methodContainerType.methodTypeInstance,
-                  methodMap
-                )
-                if (searchResult.isFound) {
-                  clsMethodUtil.recordLastMethodCall(pMethodInfo.name,
-                    arguments, searchResult.method, this)
-                  return searchResult.method.apply(this, arguments)
-                } else {
-                  throw Error(searchResult.errors)
-                }
+            XClass.prototype[methodInfo.name] = (function () {
+              return function () {
+                return clsMethodUtil.executeInstanceMethod(XClass, this, methodInfo.name, arguments)
               }
-              fn._methodName = methodInfo.name
-              return fn
-            })(methodInfo)
+            })()
           })
 
           // adding meta property to the class

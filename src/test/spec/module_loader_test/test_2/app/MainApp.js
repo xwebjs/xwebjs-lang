@@ -7,7 +7,7 @@ _x.exportModule(
       'common.MagicCollection'
     ]
   },
-  function (Line, Circle) {
+  function (Line, Circle, Collection, MagicCollection) {
     return _x.createCls(
       {
         props: {
@@ -15,7 +15,8 @@ _x.exportModule(
           line: null
         },
         staticProps: {
-          status: ''
+          status: '',
+          collection: new Collection()
         },
         staticMethods: {
           main: function () {
@@ -26,6 +27,9 @@ _x.exportModule(
             line.drawShape()
             circle.drawCircle()
             this.$.status = 'done'
+          },
+          getCollectionSize: function () {
+            return this.$.collection.size()
           }
         },
         methods: {
