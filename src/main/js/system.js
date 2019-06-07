@@ -791,8 +791,9 @@
                   _.forEach(mFilePaths,
                     function (modulePath, index) {
                       var moduleLoading = me.loadingModules[modulePath]
-                      if (me.hasModule(modulePath)) {
-                        loadingModules.push(me.getModule(modulePath))
+                      var loadedModule = me.getModule(modulePath)
+                      if (!_.isNull(loadedModule)) {
+                        loadingModules.push(loadedModule)
                       } else if (
                         moduleLoading &&
                         (moduleLoading.status === 1 || moduleLoading.status === 2)
@@ -860,7 +861,7 @@
                 if (_.has(currentPackage.packages, eachPackagePath)) {
                   currentPackage = currentPackage.packages[eachPackagePath]
                 } else {
-                  throw Error('XPackage "' + packagePath + '" is not found')
+                  return null
                 }
               })
               return currentPackage
@@ -878,24 +879,41 @@
               }
             ],
             getModule: [
+              /**
+               * @name getModule
+               * @memberOf XModuleContext#
+               * @public
+               * @instance
+               * @method
+               * @param fullName
+               * @returns {XModule}
+               */
               function (fullName) {
                 var info = XModuleContext.parseName(fullName)
-                return this.getModule(info.packagePath, info.moduleName, false)
+                return this.getModule(info.packagePath, info.moduleName)
               },
-              function (fullName, tryRemote) {
-                var info = XModuleContext.parseName(fullName)
-                return this.getModule(info.packagePath, info.moduleName,
-                  tryRemote)
-              },
-              function (packagePath, moduleName, tryRemote) {
-                var me = this
-                var xPackage = this.getRootPackage(packagePath)
-                tryRemote = Boolean(tryRemote)
-                if (xPackage.hasModule(moduleName) && !tryRemote) {
-                  return xPackage.modules[moduleName]
-                } else {
-                  //todo
+              /**
+               * @name getModule
+               * @memberOf XModuleContext#
+               * @public
+               * @instance
+               * @method
+               * @param packagePath
+               * @param moduleName
+               * @returns {XModule}
+               */
+              function (packagePath, moduleName) {
+                var foundModule = null
+                if (!_.isNull(this.parentContext)) {
+                  foundModule = this.parentContext.getModule(packagePath, moduleName)
                 }
+                if (_.isNull(foundModule)) {
+                  var xPackage = this.getRootPackage(packagePath)
+                  if (!_.isNull(xPackage) && xPackage.hasModule(moduleName)) {
+                    foundModule = xPackage.modules[moduleName]
+                  }
+                }
+                return foundModule
               }
             ],
             hasModule: [
@@ -1050,8 +1068,7 @@
         var firstModule
         if (entryClassNames.length > 0) {
           firstModule = this.getModule(
-            entryClassNames[0],
-            false
+            entryClassNames[0]
           )
           return firstModule.getClass()
         } else {

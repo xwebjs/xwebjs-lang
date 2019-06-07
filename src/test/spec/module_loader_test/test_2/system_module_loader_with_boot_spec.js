@@ -10,14 +10,14 @@ describe('System module loader', function () {
     system.setConfiguration({
       systemInfo: {
         loader: {
-          bootPath: '/test2/system//boot',
+          bootPath: '/test2/system/boot',
           extPath: '/test2/system/ext'
         },
         bootModules: [
-          'Core'
+          'Core', 'common.Collection'
         ],
         extModules: [
-          'Ext'
+          'Ext', 'common.MagicCollection'
         ]
       },
       mainAppInfo: {

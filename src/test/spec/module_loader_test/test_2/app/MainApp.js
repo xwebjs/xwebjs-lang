@@ -2,7 +2,9 @@ _x.exportModule(
   {
     imports: [
       'ui.pen.Line',
-      'ui.pen.Circle'
+      'ui.pen.Circle',
+      'common.Collection',
+      'common.MagicCollection'
     ]
   },
   function (Line, Circle) {
