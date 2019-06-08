@@ -693,15 +693,6 @@
             }
           },
           methods: {
-            /**
-             * @memberOf XModuleContext#
-             * @public
-             * @instance
-             * @method
-             */
-            setParentContext: function (parentCtx) {
-              this.parentContext = parentCtx
-            },
             setConfiguration: function (config) {
               _.assign(
                 this.configuration,
@@ -803,7 +794,7 @@
                 })
                 if (currentPackage.hasModule(moduleName)) {
                   // todo
-                  // need to make decision about whehter need to throw exception later
+                  // need to make decision about whether need to throw exception later
                   // throw new Error('XModule name "' + moduleName + '" has existed in the xPackage "' + packagePath)
                 } else {
                   currentPackage.addModule(moduleName, moduleContent)

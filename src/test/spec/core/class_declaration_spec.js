@@ -55,7 +55,7 @@ describe('Declare class', function () {
     }
   ]
   beforeEach(function () {
-    spyBox = jasmine.createSpyObj('', ['methodA', 'methodB', 'methodC', 'methodD'])
+    spyBox = jasmine.createSpyObj('', ['methodA', 'methodB', 'methodC', 'methodD', 'methodE'])
 // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
   })
@@ -171,7 +171,6 @@ describe('Declare class', function () {
         // @then
         expect(spyBox.methodD).toHaveBeenCalledWith('a', 13, emptyCustomTypeInstance)
       })
-
       it('Call peer constructor', function () {
         // @when
         var Person = _x.createCls(
@@ -193,6 +192,54 @@ describe('Declare class', function () {
         )
         var person = new Person('a', 'b')
         // @then
+        expect(spyBox.methodC).toHaveBeenCalledWith('a', 'b')
+        expect(spyBox.methodB).toHaveBeenCalledWith('a')
+        expect(spyBox.methodA).toHaveBeenCalled()
+      })
+
+      it('Call peer constructor for avoid recursive self call', function () {
+        // @when
+        var Person = _x.createCls(
+          {
+            construct: [
+              function () {
+                spyBox.methodA.apply(this, arguments)
+              },
+              function (a) {
+                this._construct()
+                spyBox.methodB.apply(this, arguments)
+              },
+              function (a, b) {
+                this._construct(a)
+                spyBox.methodC.apply(this, arguments)
+              }
+            ]
+          }
+        )
+        var Superman = _x.createCls(
+          {
+            construct: [
+              function (a, b) {
+                this._callParent(arguments)
+                spyBox.methodD.apply(this, arguments)
+              }
+            ]
+          }, Person
+        )
+        var XSuperman = _x.createCls(
+          {
+            construct: [
+              function (a, b) {
+                this._callParent(arguments)
+                spyBox.methodE.apply(this, arguments)
+              }
+            ]
+          }, Superman
+        )
+        var person = new XSuperman('a', 'b')
+        // @then
+        expect(spyBox.methodE).toHaveBeenCalledWith('a', 'b')
+        expect(spyBox.methodD).toHaveBeenCalledWith('a', 'b')
         expect(spyBox.methodC).toHaveBeenCalledWith('a', 'b')
         expect(spyBox.methodB).toHaveBeenCalledWith('a')
         expect(spyBox.methodA).toHaveBeenCalled()

@@ -10,7 +10,14 @@
     var commonUtil, methodUtil
     var exportedUtil = {}
     var dependencyChecker
+    var runningModel
     var __runtime
+
+    var RUNNING_MODE = {
+      DEBUG: 'DEBUG',
+      PROD: 'PROD',
+      DEV: 'DEV'
+    }
 
     // eslint-disable-next-line lodash/prefer-lodash-typecheck
     if (typeof _ !== 'function') {
@@ -45,6 +52,15 @@
             callTrace: [],
             addCall: function (callInfo) {
               __runtime.callTrace.push(callInfo)
+            },
+            isPROD: function () {
+              return runningModel === RUNNING_MODE.PROD
+            },
+            isDEV: function () {
+              return runningModel === RUNNING_MODE.PROD
+            },
+            isDEBUG: function () {
+              return runningModel === RUNNING_MODE.PROD
             }
           }
         }
@@ -173,6 +189,7 @@
       }
       var initConfiguration = function () {
         root.configuration = configuration
+        runningModel = RUNNING_MODE.DEV
       }
       var prepareExtractionFunction = function () {
         var vType = ['string', 'number', 'boolean', 'function', 'object', 'any']
@@ -879,7 +896,7 @@
               arguments, searchResult.method, targetClassInstance, targetClass)
             executionResult = searchResult.method.apply(targetClassInstance, args, targetClass)
             clsMethodUtil.recordMethodCall('after', methodName,
-              arguments, searchResult.method, targetClassInstance)
+              arguments, searchResult.method, targetClassInstance, targetClass)
             return executionResult
           } else {
             if (!_.isEmpty(searchResult.errors)) {
@@ -960,7 +977,9 @@
             callInfo = _.assignIn(callInfo, { tagName: 'after' })
             context.__runtime.lastCallInfo = callInfo
           }
-          __runtime.addCall(callInfo)
+          if (__runtime.isDEBUG()) {
+            __runtime.addCall(callInfo)
+          }
         }
       }
       root.validateCls = function (classRef) {
@@ -1028,10 +1047,10 @@
             this.__runtime = {}
             if (searchResult.isFound) {
               clsMethodUtil.recordMethodCall('before', 'construct', arguments,
-                searchResult.method, this)
+                searchResult.method, this, XClass)
               searchResult.method.apply(this, arguments)
               clsMethodUtil.recordMethodCall('after', 'construct', arguments,
-                searchResult.method, this)
+                searchResult.method, this, XClass)
             }
           }
           methodMap = {}
@@ -1100,19 +1119,17 @@
           }
 
           XClass.prototype._construct = function () {
-            var callStack = __runtime.callTrace
             var targetCls
-            if (!_.isEmpty(_.last(callStack).targetCls)) {
-              targetCls = _.last(callStack).targetCls
-            } else {
-              targetCls = this._getClassType()
-            }
+            var currentCallInfo = clsMethodUtil.getCurrentMethodCallInfo(this)
+            targetCls = currentCallInfo.targetCls
             return clsMethodUtil.executeInstanceMethod(targetCls, this, 'construct', arguments)
           }
 
           XClass.prototype._callParent = function () {
             var methodName
-            if (_.isEmpty(parentClass)) {
+            var currentCallInfo = clsMethodUtil.getCurrentMethodCallInfo(this)
+            var targetCls = currentCallInfo.targetCls._meta.parentClass
+            if (_.isEmpty(targetCls)) {
               throw new Error('Parent class is not found')
             }
             var args = arguments
@@ -1122,7 +1139,7 @@
               args = arguments[0]
             }
             methodName = clsMethodUtil.getCurrentMethodCallInfo(this).methodName
-            return clsMethodUtil.executeInstanceMethod(parentClass, this, methodName, args)
+            return clsMethodUtil.executeInstanceMethod(targetCls, this, methodName, args)
           }
 
           // populate instance methods
