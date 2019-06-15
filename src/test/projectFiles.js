@@ -3,7 +3,7 @@ var basePath = ''
 var corePath = {
   target: basePath + 'target',
   targetLibs: basePath + 'target/libs',
-  targetJs: basePath + 'src/main/js',
+  targetJs: basePath + 'src/main/js/',
   nodeModulePath: basePath + 'node_modules',
   mainSource: basePath + 'src/main',
   testSource: basePath + 'src/test'
@@ -17,7 +17,7 @@ var projectFiles = {
   ],
   coreSourceFiles: [
     corePath.targetJs + '/core.js',
-    corePath.targetJs + '/system.js',
+    corePath.targetJs + '/vm.js',
     corePath.targetJs + '/boot.js'
   ],
   testSourceBaseFilesPath: [

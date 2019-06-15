@@ -232,7 +232,7 @@ describe('Declare interface', function () {
           done()
         }
       })
-      it('No exeception contract when class validation succeed ', function (done) {
+      it('No exception contract when class validation succeed ', function (done) {
         try {
           _x.createCls(
             {

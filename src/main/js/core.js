@@ -1253,6 +1253,7 @@
         throw new Error('xwebjs only works when _x is used as a global')
       }
       root.features = {}
+      root.rootType = RootType
       root.features.isLangCore = true
       return root
     }

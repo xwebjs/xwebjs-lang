@@ -242,7 +242,12 @@ describe('Declare class', function () {
         expect(spyBox.methodD).toHaveBeenCalledWith('a', 'b')
         expect(spyBox.methodC).toHaveBeenCalledWith('a', 'b')
         expect(spyBox.methodB).toHaveBeenCalledWith('a')
-        expect(spyBox.methodA).toHaveBeenCalled()
+        // @When
+        var person1 = new XSuperman('c', 'd')
+        expect(spyBox.methodE).toHaveBeenCalledWith('c', 'd')
+        expect(spyBox.methodD).toHaveBeenCalledWith('c', 'd')
+        expect(spyBox.methodC).toHaveBeenCalledWith('c', 'd')
+        expect(spyBox.methodB).toHaveBeenCalledWith('c')
       })
     })
   })
@@ -1164,7 +1169,7 @@ describe('Declare class', function () {
         moon.show()
         expect(spyBox.methodC).toHaveBeenCalled()
       })
-      it(' callParent method is called in construct', function () {
+      it('callParent method is called in construct', function () {
         var Shape = _x.createCls(
           {
             construct: function (name) {

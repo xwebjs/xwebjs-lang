@@ -1,13 +1,13 @@
 /* eslint-disable no-unused-vars,spaced-comment */
 (function () {
     var MODULE_TYPE = {
-      APP_MODULE: 'APP_MODULE',
+      PROGRAM_MODULE: 'PROGRAM_MODULE',
       BOOT_MODULE: 'BOOT_MODULE',
       EXT_MODULE: 'EXT_MODULE'
     }
     var root = _x
-    var XModule, XPackage, XModuleContext, XApp, XSystem
-    var xSystem
+    var XModule, XPackage, XModuleContext, XProgram, XVM
+    var rootVM
     var WebResourceUtil
     var logger
     var dependencies = {
@@ -435,15 +435,14 @@
        */
       function generateRemoteModuleFilePath (modulePath, moduleType) {
         var path = ''
-        var systemB
         switch (moduleType) {
           case MODULE_TYPE.BOOT_MODULE:
-            path = xSystem.getConfigValue('loader.bootPath')
+            path = rootVM.getConfigValue('loader.bootPath')
             break
           case MODULE_TYPE.EXT_MODULE:
-            path = xSystem.getConfigValue('loader.extPath')
+            path = rootVM.getConfigValue('loader.extPath')
             break
-          case MODULE_TYPE.APP_MODULE:
+          case MODULE_TYPE.PROGRAM_MODULE:
             path = this.getConfigValue('loader.basePath')
             break
         }
@@ -915,10 +914,10 @@
       }
     }
 
-    function enableSystem () {
+    function enableVM () {
       /**
        * @static
-       * @memberOf XSystem
+       * @memberOf XVM
        */
       var configuration = {}
 
@@ -927,47 +926,47 @@
       }
 
       /**
-       * @memberOf XSystem
+       * @memberOf XVM
        *
        * @private
        * @instance
        * @returns {*|PromiseLike<T | never>|Promise<T | never>}
        */
-      function startDefaultApp () {
-        var systemDefaultApp = XApp.newInstance(this.mainAppConfiguration)
-        this.mainAppInstance = systemDefaultApp
-        var mAppClass
-        if (!_.isNull(systemDefaultApp)) {
-          return systemDefaultApp.initialize().then(
-            function (mainAppClass) {
-              mAppClass = mainAppClass
-              return Q(mainAppClass.main())
+      function startDefaultProgram () {
+        var systemDefaultProgram = XProgram.newInstance(this.mainProgramConfiguration)
+        this.mainProgramInstance = systemDefaultProgram
+        var mProgramClass
+        if (!_.isNull(systemDefaultProgram)) {
+          return systemDefaultProgram.initialize().then(
+            function (mainProgramClass) {
+              mProgramClass = mainProgramClass
+              return Q(mainProgramClass.main())
             },
             function (errors) {
               throw Error('System initialization failed: ' + errors)
             }
           ).then(
             function () {
-              return mAppClass
+              return mProgramClass
             },
             function (reason) {
               throw Error('Entry main method execution failed: ' + reason)
             }
           )
         } else {
-          throw Error('mainAppClassName is not defined')
+          throw Error('mainProgramClassName is not defined')
         }
       }
 
       /**
-       * @class XSystem
+       * @class XVM
        */
-      XSystem = _x.createCls(
+      XVM = _x.createCls(
         {
           props: {
             configuration: {},
-            mainAppConfiguration: {},
-            mainAppInstance: null
+            mainProgramConfiguration: {},
+            mainProgramInstance: null
           },
           staticProps: {
             bootContext: null,
@@ -975,8 +974,8 @@
           },
           methods: {
             setConfiguration: function (configuration) {
-              _.assign(this.configuration, configuration.systemInfo)
-              _.assign(this.mainAppConfiguration, configuration.mainAppInfo)
+              _.assign(this.configuration, configuration.vmInfo)
+              _.assign(this.mainProgramConfiguration, configuration.mainProgramInfo)
             },
             getConfigValue: function (keyPath) {
               return _.property(_.split(keyPath, '.'))(this.configuration)
@@ -1007,12 +1006,12 @@
               ).then(
                 function () {
                   me.$.extContext = extContext
-                  return startDefaultApp.call(me)
+                  return startDefaultProgram.call(me)
                 }
               ).catch(
                 function (errors) {
                   console.error(
-                    'Failed to initialize the xSystem, caused by:' + errors)
+                    'Failed to initialize the rootVM, caused by:' + errors)
                   throw Error(errors)
                 }
               )
@@ -1022,18 +1021,18 @@
       )
 
       // mount API to the test_1
-      root.getSystem = function () {
-        return xSystem
+      root.getRootVM = function () {
+        return rootVM
       }
 
-      xSystem = XSystem.newInstance()
+      rootVM = XVM.newInstance()
     }
 
     /**
-     * @class XApp
+     * @class XProgram
      */
-    function enableApplication () {
-      function identifyAppEntryClass () {
+    function enableProgram () {
+      function identifyProgramEntryClass () {
         var entryClassNames = _x.util.asArray(this.configuration.entryClassNames)
         var firstModule
         if (entryClassNames.length > 0) {
@@ -1048,11 +1047,11 @@
         }
       }
 
-      XApp = _x.createCls(
+      XProgram = _x.createCls(
         {
           construct: [
             function (appConfig) {
-              this._callParent(XSystem.$.extContext, MODULE_TYPE.APP_MODULE)
+              this._callParent(XVM.$.extContext, MODULE_TYPE.PROGRAM_MODULE)
               this.setConfiguration(appConfig)
             }
           ],
@@ -1061,23 +1060,23 @@
               basePath: null,
               entryClassNames: ''
             },
-            mAppClass: null,
-            mAppInstance: null,
+            mProgramClass: null,
+            mProgramInstance: null,
             appModulePaths: null,
             mLoader: null
           },
           staticMethods: {
-            createAppInstance: function () {
-              return XApp.newInstance()
+            createProgramInstance: function () {
+              return XProgram.newInstance()
             }
           },
           methods: {
             initialize: function () {
               var me = this
-              return this.initAppContext().then(
+              return this.initProgramContext().then(
                 function () {
-                  me.mAppClass = identifyAppEntryClass.call(me)
-                  return me.mAppClass
+                  me.mProgramClass = identifyProgramEntryClass.call(me)
+                  return me.mProgramClass
                 }
               ).catch(
                 function (error) {
@@ -1087,13 +1086,13 @@
                 }
               )
             },
-            initAppContext: function () {
+            initProgramContext: function () {
               var me = this
               return me.loadModules(
                 _x.util.asArray(me.configuration.entryClassNames))
             },
             start: function () {
-              return this.mAppClass.main()
+              return this.mProgramClass.main()
             }
           }
         }
@@ -1101,8 +1100,8 @@
       )
 
       // mount API to test_1
-      root.createApp = function () {
-        return XApp.createAppInstance.call(arguments)
+      root.createProgram = function () {
+        return XProgram.createProgramInstance.call(arguments)
       }
 
       root.exportModule = XModule.exportModule
@@ -1113,8 +1112,8 @@
       enableModule()
       enableModuleContext()
       enablePackage()
-      enableApplication()
-      enableSystem()
+      enableProgram()
+      enableVM()
     }
 
     function postProcess () {

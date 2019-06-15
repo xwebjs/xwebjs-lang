@@ -1,8 +1,0 @@
-import ui.CommonUtil
-
-public class{
-    private name:string
-    public draw(){
-        CommonUtil.doSomeThing()
-    }
-}

@@ -4,24 +4,24 @@ describe('System module loader', function () {
     jasmine.addMatchers(objectMatcher)
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 50000
   })
-  it('Load app modules from web server', function (done) {
+  it('Load program modules from web server', function (done) {
     // @Given
-    var system = _x.getSystem()
-    system.setConfiguration({
+    var vm = _x.getRootVM()
+    vm.setConfiguration({
       systemInfo: {
         loader: {},
         bootModulePath: [],
         extPath: []
       },
-      mainAppInfo: {
+      mainProgramInfo: {
         loader: {
-          basePath: '/test1/app'
+          basePath: '/test1/program'
         },
-        entryClassNames: 'MainApp'
+        entryClassNames: 'MainProgram'
       }
     })
     // @Then
-    system.init().then(
+    vm.init().then(
       function (defaultApp) {
         expect(defaultApp.$.status === 'done').toBeTruthy()
         done()

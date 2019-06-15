@@ -1,4 +1,3 @@
-karma.conf.js
 target/**
 libs/**
 *.md

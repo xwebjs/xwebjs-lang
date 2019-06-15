@@ -21,9 +21,9 @@ module.exports = function (config) {
         ]
       ),
     proxies: {
-      '/test1/app/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader_test/test_1/app/',
-      '/test2/app/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader_test/test_2/app/',
-      '/test2/system/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader_test/test_2/system/',
+      '/test1/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader_test/test_1/program/',
+      '/test2/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader_test/test_2/program/',
+      '/test2/vm/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader_test/test_2/vm/'
     }
   })
 }

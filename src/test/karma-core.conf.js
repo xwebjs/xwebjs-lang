@@ -15,7 +15,7 @@ module.exports = function (config) {
         ]
       ),
     proxies: {
-      '/system/': '/base/' + projectFiles.corePath.targetJs,
+      '/system/': '/base/' + projectFiles.corePath.targetJs
     }
   })
 }

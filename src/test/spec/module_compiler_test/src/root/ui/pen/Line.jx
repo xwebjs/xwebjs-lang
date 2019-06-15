@@ -1,8 +1,0 @@
-import ui.CommonUtil as CommonUtil
-import ui.Shape as Shape
-
-public class extends Shape{
-  public getLine() {
-    return CommonUtil.getSomething()
-  }
-}

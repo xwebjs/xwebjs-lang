@@ -4,14 +4,14 @@ describe('System module loader', function () {
     jasmine.addMatchers(objectMatcher)
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
-  it('Load system boot modules from web server', function (done) {
+  it('Load vm boot modules from web server', function (done) {
     // @Given
-    var system = _x.getSystem()
-    system.setConfiguration({
-      systemInfo: {
+    var vm = _x.getRootVM()
+    vm.setConfiguration({
+      vmInfo: {
         loader: {
-          bootPath: '/test2/system/boot',
-          extPath: '/test2/system/ext'
+          bootPath: '/test2/vm/boot',
+          extPath: '/test2/vm/ext'
         },
         bootModules: [
           'Core', 'common.Collection'
@@ -20,15 +20,15 @@ describe('System module loader', function () {
           'Ext', 'common.MagicCollection'
         ]
       },
-      mainAppInfo: {
+      mainProgramInfo: {
         loader: {
-          basePath: '/test2/app'
+          basePath: '/test2/program'
         },
-        entryClassNames: 'MainApp'
+        entryClassNames: 'MainProgram'
       }
     })
     // @Then
-    system.init().then(
+    vm.init().then(
       function (mainAppClass) {
         expect(mainAppClass.$.status === 'done').toBeTruthy()
         expect(mainAppClass.getCollectionSize() === 100).toBeTruthy()
