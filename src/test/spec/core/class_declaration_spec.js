@@ -56,7 +56,7 @@ describe('Declare class', function () {
   ]
   beforeEach(function () {
     spyBox = jasmine.createSpyObj('', ['methodA', 'methodB', 'methodC', 'methodD', 'methodE'])
-// eslint-disable-next-line no-undef
+    // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
   })
   describe('Pure class declaration', function () {

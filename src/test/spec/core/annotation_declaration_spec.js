@@ -1,5 +1,4 @@
 describe('Declare annotation', function () {
-// eslint-disable-next-line no-unused-vars
   var spyBox
   beforeEach(function () {
     spyBox = jasmine.createSpyObj('', ['methodA', 'methodB', 'methodC', 'methodD'])
@@ -9,7 +8,7 @@ describe('Declare annotation', function () {
   describe('Declare simple annotation', function () {
     it('Check annotation type', function () {
       var annotation = _x.createAnnotation()
-      expect(annotation.isAnnotation()).toBeTruthy()
+      expect(_x.isAnnotation(annotation)).toBeTruthy()
     })
   })
   describe('Check the annotation on class', function () {
