@@ -35,7 +35,7 @@ describe('Declare annotation', function () {
     })
   })
   describe('Annotation contain properties', function () {
-    it('Has property with defined value', function () {
+    it('Assign one value', function () {
       var annotation = _x.createAnnotation(
         {
           name: ''
@@ -48,7 +48,20 @@ describe('Declare annotation', function () {
       )
       expect(Person.getAnnotation().value() === 'superman').toBeTruthy()
     })
-    it('Has property with default value', function () {
+    it('Assign two value', function () {
+      var annotation = _x.createAnnotation(
+        {
+          name: ''
+        }
+      )
+      var Person = _x.createCls(
+        {
+          annotations: [annotation('superman')]
+        }
+      )
+      expect(Person.getAnnotation().value() === 'superman').toBeTruthy()
+    })
+    it('Assign the default value', function () {
       var annotation = _x.createAnnotation(
         {
           name: 'hello'
