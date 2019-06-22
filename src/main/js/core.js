@@ -243,7 +243,7 @@
                 value: undefined
               }
             } else if (
-              _.isObject(info) && info.__xConfig
+              _.isObject(info) && info._xConfig
             ) {
               returnInfo = _.assign(info, {
                 name: (info && info.name) || key

@@ -1,5 +1,5 @@
 // eslint-disable-next-line no-unused-vars
-describe('Declare annotation', function () {
+describe('Declare structure', function () {
   var spyBox
   beforeEach(function () {
     spyBox = jasmine.createSpyObj('', ['methodA', 'methodB', 'methodC', 'methodD'])

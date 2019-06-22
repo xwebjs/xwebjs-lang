@@ -127,7 +127,7 @@
         {
           props: {
             content: {
-              __xConfig: true,
+              _xConfig: true,
               type: 'any'
             },
             moduleContextPath: null,
@@ -638,7 +638,7 @@
           ],
           props: {
             ctxPackage: {
-              __xConfig: true,
+              _xConfig: true,
               type: XPackage
             },
             moduleType: null,

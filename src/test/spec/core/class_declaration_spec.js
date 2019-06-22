@@ -278,43 +278,43 @@ describe('Declare class', function () {
     }
     var defaultPropInfoWithKey = {
       name: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: nameValue
       },
       age: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: ageValue
       },
       emptyObjectValue: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: emptyObjectValue
       },
       hobbies: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: hobbiesValue
       },
       tool: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: toolValue
       },
       house: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: houseValue
       },
       car: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: carValue
       },
       isReady: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: isReadyValue
       },
       isRunning: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: isRunningValue
       },
       play: {
-        __xConfig: true,
+        _xConfig: true,
         defaultValue: playValue
       }
     }
@@ -470,7 +470,7 @@ describe('Declare class', function () {
           var Person = _x.createCls({
             props: {
               map: {
-                __xConfig: true,
+                _xConfig: true,
                 shared: true,
                 defaultValue: emptyObjectValue
               }
@@ -487,7 +487,7 @@ describe('Declare class', function () {
             {
               props: {
                 map: {
-                  __xConfig: true,
+                  _xConfig: true,
                   shared: false,
                   defaultValue: emptyObjectValue
                 }
@@ -511,31 +511,31 @@ describe('Declare class', function () {
           Person = _x.createCls({
             props: {
               stringValue: {
-                __xConfig: true,
+                _xConfig: true,
                 type: 'string'
               },
               booleanValue: {
-                __xConfig: true,
+                _xConfig: true,
                 type: 'boolean'
               },
               numberValue: {
-                __xConfig: true,
+                _xConfig: true,
                 type: 'number'
               },
               functionValue: {
-                __xConfig: true,
+                _xConfig: true,
                 type: 'function'
               },
               objectValue: {
-                __xConfig: true,
+                _xConfig: true,
                 type: 'object'
               },
               classValue: {
-                __xConfig: true,
+                _xConfig: true,
                 type: Style
               },
               interfaceValue: {
-                __xConfig: true,
+                _xConfig: true,
                 type: IfStyle
               }
             }
@@ -995,7 +995,7 @@ describe('Declare class', function () {
         {
           props: {
             preference: {
-              __xConfig: true,
+              _xConfig: true,
               defaultValue: 'good'
             },
             name: 'Wang',
