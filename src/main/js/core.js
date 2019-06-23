@@ -11,7 +11,8 @@
     var dependencyChecker
     var runningModel
     var __runtime
-    var vType = ['string', 'number', 'boolean', 'function', 'object', 'any']
+    var vType = ['string', 'number', 'boolean', 'object', 'class',
+      'function', 'struct', 'array', 'any']
 
     var RUNNING_MODE = {
       DEBUG: 'DEBUG',
