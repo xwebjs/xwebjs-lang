@@ -1,8 +1,8 @@
 var basePath = ''
 
 var corePath = {
-  target: basePath + 'target',
-  targetLibs: basePath + 'target/libs',
+  target: basePath + '',
+  targetLibs: basePath + 'libs',
   targetJs: basePath + 'src/main/js/',
   nodeModulePath: basePath + 'node_modules',
   mainSource: basePath + 'src/main',

@@ -4,14 +4,14 @@
     var gRoot = this
     var configuration = {}
     var metaExtractFunction
-    var classMetaExtractionRule
-    var ifMetaExtractionRule
-    var RootType, XFace
+    var classMetaExtractionRule, ifMetaExtractionRule, annotationExtractionRule
+    var RootType, XFace, XAnnotation
     var commonUtil, methodUtil
     var exportedUtil = {}
     var dependencyChecker
     var runningModel
     var __runtime
+    var vType = ['string', 'number', 'boolean', 'function', 'object', 'any']
 
     var RUNNING_MODE = {
       DEBUG: 'DEBUG',
@@ -27,7 +27,7 @@
     var dependencies = {}
 
     function init () {
-      (function () {
+      var checkDependency = function () {
         var initDependencyChecker = function () {
           dependencyChecker = {
             check: function (dependencies) {
@@ -47,31 +47,30 @@
             }
           }
         }
-        var prepareRuntimeManager = function () {
-          __runtime = {
-            callTrace: [],
-            addCall: function (callInfo) {
-              __runtime.callTrace.push(callInfo)
-            },
-            isPROD: function () {
-              return runningModel === RUNNING_MODE.PROD
-            },
-            isDEV: function () {
-              return runningModel === RUNNING_MODE.PROD
-            },
-            isDEBUG: function () {
-              return runningModel === RUNNING_MODE.PROD
-            }
-          }
-        }
-        prepareRuntimeManager()
         initDependencyChecker()
         var checkResult = dependencyChecker.check(dependencies)
         if (checkResult.length !== 0) {
           throw Error(
             'Dependency check failed because :\n' + checkResult.join('\n'))
         }
-      })()
+      }
+      var prepareRuntimeManager = function () {
+        __runtime = {
+          callTrace: [],
+          addCall: function (callInfo) {
+            __runtime.callTrace.push(callInfo)
+          },
+          isPROD: function () {
+            return runningModel === RUNNING_MODE.PROD
+          },
+          isDEV: function () {
+            return runningModel === RUNNING_MODE.PROD
+          },
+          isDEBUG: function () {
+            return runningModel === RUNNING_MODE.PROD
+          }
+        }
+      }
       var initUtil = function () {
         commonUtil = {}
         commonUtil.getRandomString = function (length) {
@@ -81,6 +80,30 @@
             result += letters.charAt(_.random(0, letters.length - 1))
           })
           return result
+        }
+        commonUtil.getValueType = function (value) {
+          var type = _.lowerCase(typeof value)
+          if (_.includes(['string', 'number', 'boolean'], type)) {
+            return type
+          }
+          if (type === 'function') {
+            if (value.isCustomClass) {
+              type = 'class'
+            } else {
+              type = 'function'
+            }
+          } else if (type === 'object') {
+            if (value instanceof RootType) {
+              type = value._getClassType()
+            } else if (value instanceof XFace) {
+              type = value
+            } else if (_.isNull(value)) {
+              type = 'any'
+            } else {
+              type = 'object'
+            }
+          }
+          return type
         }
         commonUtil.checkValueType = function (value, type) {
           var result = false
@@ -192,17 +215,37 @@
         runningModel = RUNNING_MODE.DEV
       }
       var prepareExtractionFunction = function () {
-        var vType = ['string', 'number', 'boolean', 'function', 'object', 'any']
         var hookBeforeProcessAllItems = 'beforeProcessAllItems'
         var hookProcessEachArrayElement = 'processEachArrayElement'
         var hookProcessEachObjectKeyElement = 'processEachObjectKeyElement'
         var hookBeforeProcessEachItem = 'beforeProcessEachItem'
+        var getValueTypeBasedOnDefaultValue = function (
+          value,
+          propertyNameOfReturnedValue,
+          eachSrcMetaInfo) {
+          if (
+            _.isUndefined(eachSrcMetaInfo.type) &&
+            !_.isUndefined(eachSrcMetaInfo.value) &&
+            !_.isUndefined(value)
+          ) {
+            return commonUtil.getValueType(value)
+          } else {
+            return undefined
+          }
+        }
         var returnType = function (
           value,
           propertyNameOfReturnedValue,
           eachSrcMetaInfo) {
-          var type = _.isObject(eachSrcMetaInfo)
-            ? eachSrcMetaInfo.type
+          var type
+          type = getValueTypeBasedOnDefaultValue(
+            value, propertyNameOfReturnedValue, eachSrcMetaInfo
+          )
+          if (!_.isUndefined(type)) {
+            return type
+          }
+          type = _.isObject(eachSrcMetaInfo)
+            ? eachSrcMetaInfo.type || 'any'
             : undefined
           if (_.isEmpty(type)) {
             return 'any'
@@ -215,9 +258,9 @@
             throw new Error('Parameter type "' + type + '" is not supported ')
           }
         }
-        var returnName = function (srcNodeInfo) {
-          if (_.isString(srcNodeInfo)) {
-            return srcNodeInfo
+        var returnName = function (value) {
+          if (_.isString(value)) {
+            return value
           } else {
             throw new Error(
               'missing node name information or it is not string type')
@@ -231,6 +274,16 @@
             throw Error('The definition of the method is invalid')
           }
           return returnFunction
+        }
+        var returnDefaultValue = function (
+          value,
+          propertyNameOfReturnedValue,
+          eachSrcMetaInfo) {
+          if (_.isFunction(value)) {
+            return undefined
+          } else {
+            return value
+          }
         }
 
         var propertyRuleElements = {
@@ -290,13 +343,7 @@
               }
             },
             defaultValue: {
-              returnValue: function (value) {
-                if (_.isFunction(value)) {
-                  return undefined
-                } else {
-                  return value
-                }
-              }
+              returnValue: returnDefaultValue
             }
           }
         }
@@ -421,6 +468,58 @@
             }
           }
         })()
+        annotationExtractionRule = {
+          isMultiple: false,
+          childElements: {
+            mixins: {
+              isMultiple: true,
+              returnValue: function (value) {
+                if (!_.isUndefined(value) && value.isAnnotation) {
+                  return value
+                } else {
+                  throw new Error('The mixed-in annotations assignment must be annotation')
+                }
+              }
+            },
+            props: {
+              isMultiple: true,
+              processEachObjectKeyElement: propertyRuleElements.processEachObjectKeyElement,
+              childElements: {
+                name: {
+                  returnValue: returnName
+                },
+                defaultValue: {
+                  returnValue: returnDefaultValue
+                },
+                type: {
+                  returnValue: function (
+                    value,
+                    propertyNameOfReturnedValue,
+                    eachSrcMetaInfo) {
+                    var type
+                    type = getValueTypeBasedOnDefaultValue(
+                      value, propertyNameOfReturnedValue, eachSrcMetaInfo
+                    )
+                    if (!_.isUndefined(type)) {
+                      return type
+                    }
+                    type = _.isObject(eachSrcMetaInfo)
+                      ? eachSrcMetaInfo.type || 'string'
+                      : undefined
+                    if (
+                      _.includes(['string', 'number', 'boolean'], type)
+                    ) {
+                      return type
+                    } else {
+                      throw new Error('The type of annotation property value assignment is invalid : ' + type)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
         metaExtractFunction = function (
           srcMetaInfo, srcParentMetaInfo, extractionRule) {
           var extractionResult = {
@@ -604,11 +703,22 @@
           )
         }
       }
+      var initXAnnotation = function () {
+        // eslint-disable-next-line lodash/prefer-noop
+        XAnnotation = function () {}
+      }
+
+      checkDependency()
+      prepareRuntimeManager()
+
+      initRoot()
       initUtil()
       initExportedUtil()
+
       initRootType()
       initXFace()
-      initRoot()
+      initXAnnotation()
+
       initConfiguration()
       prepareExtractionFunction()
     }
@@ -620,7 +730,16 @@
         methodTypeConstruct: 2
       }
       var clsValidator = {
-        checkIfs: function (classRef) {
+        validate: function (classRef) {
+          var checkErrors = clsValidator._checkIfs(classRef)
+          if (_.isEmpty(checkErrors)) {
+            return ''
+          } else {
+            return 'declared class does not implement required methods in declared interface, caused by : \n' +
+              checkErrors
+          }
+        },
+        _checkIfs: function (classRef) {
           var faces = classRef._meta.implements
           var errors = []
           if (!_.isEmpty(faces)) {
@@ -982,15 +1101,6 @@
           }
         }
       }
-      root.validateCls = function (classRef) {
-        var checkErrors = clsValidator.checkIfs(classRef)
-        if (_.isEmpty(checkErrors)) {
-          return ''
-        } else {
-          return 'declared class does not implement required methods in declared interface, caused by : \n' +
-            checkErrors
-        }
-      }
       root.createIf = function (metaInfo, pIfs) {
         var extractionResult, parentIfs, builtIf
 
@@ -1226,7 +1336,7 @@
           classMetaExtractionRule)
         builtCls = build(extractionResult.resultMetaInfo, parentClassInfo)
 
-        var result = root.validateCls(builtCls)
+        var result = clsValidator.validate(builtCls)
 
         if (_.isEmpty(result)) {
           return builtCls
@@ -1234,15 +1344,45 @@
           throw Error(result)
         }
       }
+      root.createAnnotation = function (metaInfo) {
+        var extractionResult
+
+        function build (cleanMetaInfo) {
+          var Annotation = function () {
+            var me = this
+            _.forEach(cleanMetaInfo.props,
+              function (prop, index) {
+                me[prop.name] = prop.defaultValue
+              }
+            )
+            return me
+          }
+          Annotation.prototype = _.create(XAnnotation)
+          Annotation._meta = {
+            props: {}
+          }
+          _.forEach(cleanMetaInfo.props,
+            function (prop, index) {
+              Annotation._meta.props[prop.name] = prop
+            }
+          )
+          Annotation.isAnnotation = true
+          return Annotation
+        }
+
+        extractionResult = metaExtractFunction(metaInfo, null, annotationExtractionRule)
+        return build(extractionResult.resultMetaInfo)
+      }
 
       root.isCustomClass = function (cls) {
         return cls && cls.isCustomClass
       }
-
       root.isCustomIf = function (customIf) {
         return customIf && customIf.isCustomIf
       }
-
+      root.isAnnotation = function (annotation) {
+        return annotation && annotation.isAnnotation
+      }
       root.util = (function () {
         return exportedUtil
       })()
@@ -1261,5 +1401,7 @@
     init()
     setup()
     return prepareReturn()
-  }.call(this)
+  }
+
+  .call(this)
 )

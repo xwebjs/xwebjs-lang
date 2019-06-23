@@ -1,6 +1,6 @@
 {
   "name": "xwebjs-lang",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "JavaScript library for supporting OO programming language features",
   "main": "xwebjs-lang.js",
   "scripts": {
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nickligit/xwebjs-lang.git"
+    "url": "git+https://github.com/xwebjs/xwebjs-lang.git"
   },
   "keywords": [
     "JavaScript",
     "OO",
     "programming"
   ],
-  "author": "nickligit <nmrkli@163.com>",
+  "author": "nickli <nmrkli@163.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/nickligit/xwebjs-lang/issues"

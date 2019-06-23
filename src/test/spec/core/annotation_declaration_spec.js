@@ -5,10 +5,48 @@ describe('Declare annotation', function () {
 // eslint-disable-next-line no-undef
     jasmine.addMatchers(methodMetaMatchers)
   })
-  describe('Declare simple annotation', function () {
-    it('Check annotation type', function () {
+  describe('Declare annotation', function () {
+    it('Simple annotation', function () {
       var annotation = _x.createAnnotation()
       expect(_x.isAnnotation(annotation)).toBeTruthy()
+    })
+    it('Declare annotation with one property', function () {
+      var annotation = _x.createAnnotation({
+        props: {
+          name: 'superman'
+        }
+      })
+      expect(_x.isAnnotation(annotation)).toBeTruthy()
+      expect(annotation._meta.props.name.name === 'name').toBeTruthy()
+      expect(annotation._meta.props.name.type === 'string').toBeTruthy()
+      expect(annotation._meta.props.name.defaultValue === 'superman').toBeTruthy()
+      var annotationInstance = annotation()
+      expect(annotationInstance.name === 'superman').toBeTruthy()
+    })
+    it('Declare annotation with one property', function () {
+      var annotation = _x.createAnnotation({
+        props: {
+          name: 'superman',
+          age: 19,
+          isGood: false
+        }
+      })
+      expect(_x.isAnnotation(annotation)).toBeTruthy()
+      var annotationInstance = annotation()
+      expect(annotation._meta.props.name.name === 'name').toBeTruthy()
+      expect(annotation._meta.props.name.type === 'string').toBeTruthy()
+      expect(annotation._meta.props.name.defaultValue === 'superman').toBeTruthy()
+      expect(annotationInstance.name === 'superman').toBeTruthy()
+
+      expect(annotation._meta.props.age.name === 'age').toBeTruthy()
+      expect(annotation._meta.props.age.type === 'number').toBeTruthy()
+      expect(annotation._meta.props.age.defaultValue === 19).toBeTruthy()
+      expect(annotationInstance.age === 19).toBeTruthy()
+
+      expect(annotation._meta.props.isGood.name === 'isGood').toBeTruthy()
+      expect(annotation._meta.props.isGood.type === 'boolean').toBeTruthy()
+      expect(annotation._meta.props.isGood.defaultValue === false).toBeTruthy()
+      expect(annotationInstance.isGood === false).toBeTruthy()
     })
   })
   describe('Check the annotation on class', function () {
