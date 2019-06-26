@@ -6,7 +6,7 @@
     var metaExtractFunction
     var classMetaExtractionRule, ifMetaExtractionRule, annotationExtractionRule
     var RootType, XFace, XAnnotation
-    var commonUtil, methodUtil
+    var commonUtil, methodUtil, annotationUtil
     var exportedUtil = {}
     var dependencyChecker
     var runningModel
@@ -145,6 +145,16 @@
         }
         commonUtil.asArray = function (value) {
           return _.isArray(value) ? value : _.split(value, ',')
+        }
+        annotationUtil = {}
+        annotationUtil.annotationPresentCheckFn = function (
+          annotation, metaInfo) {
+          return _.find(
+            metaInfo.annotations,
+            function (annotationInstance) {
+              return annotationInstance instanceof annotation
+            }
+          )
         }
         methodUtil = {
           getInfoFromDeclaredFunction: function (func) {
@@ -432,6 +442,12 @@
             isMultiple: false,
             childElements: {
               implements: {
+                isMultiple: true,
+                returnValue: function (value) {
+                  return value
+                }
+              },
+              annotations: {
                 isMultiple: true,
                 returnValue: function (value) {
                   return value
@@ -1272,7 +1288,15 @@
             implements: (_.isEmpty(cleanMetaInfo.implements)
               ? []
               : cleanMetaInfo.implements),
-            parentClass: parentClass
+            parentClass: parentClass,
+            isAnnotationPresent: function (annotation) {
+              return Boolean(
+                annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
+              )
+            },
+            getAnnotationInstance: function (annotation) {
+              return annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
+            }
           }
           cleanMetaInfo.implements = undefined
           XClass.isCustomClass = true
@@ -1361,6 +1385,9 @@
           Annotation.prototype = _.create(XAnnotation)
           Annotation._meta = {
             props: {}
+          }
+          Annotation.inst = function () {
+            return new Annotation()
           }
           _.forEach(cleanMetaInfo.props,
             function (prop, index) {

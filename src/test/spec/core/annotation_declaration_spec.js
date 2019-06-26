@@ -23,7 +23,7 @@ describe('Declare annotation', function () {
       var annotationInstance = annotation()
       expect(annotationInstance.name === 'superman').toBeTruthy()
     })
-    it('Declare annotation with one property', function () {
+    it('Declare annotation with multiple properties', function () {
       var annotation = _x.createAnnotation({
         props: {
           name: 'superman',
@@ -54,62 +54,50 @@ describe('Declare annotation', function () {
       var annotation = _x.createAnnotation()
       var Person = _x.createCls(
         {
-          annotations: [annotation]
+          annotations: [annotation.inst()]
         }
       )
-      expect(Person.isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person._meta.isAnnotationPresent(annotation)).toBeTruthy()
+    })
+    it('Check whether the class has specific annotation when having no annotation', function () {
+      var annotation = _x.createAnnotation()
+      var Person = _x.createCls(
+        {
+          annotations: []
+        }
+      )
+      expect(!Person._meta.isAnnotationPresent(annotation)).toBeTruthy()
     })
     it('Check whether the class has specific annotation when having multiple annotation', function () {
       var annotation = _x.createAnnotation()
       var annotation1 = _x.createAnnotation()
       var Person = _x.createCls(
         {
-          annotations: [annotation, annotation1]
+          annotations: [annotation.inst(), annotation1.inst()]
         }
       )
-      expect(Person.isAnnotationPresent(annotation)).toBeTruthy()
-      expect(Person.isAnnotationPresent(annotation1)).toBeTruthy()
+      expect(Person._meta.isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person._meta.isAnnotationPresent(annotation1)).toBeTruthy()
     })
-  })
-  describe('Annotation contain properties', function () {
-    it('Assign one value', function () {
-      var annotation = _x.createAnnotation(
-        {
-          name: ''
+    it('Assign the value for annotation instance', function () {
+      var annotation = _x.createAnnotation({
+        props: {
+          name: 'superman',
+          age: 19,
+          isGood: false
         }
-      )
+      })
       var Person = _x.createCls(
         {
-          annotations: [annotation('superman')]
+          annotations: [annotation.inst({
+            name: 'xman',
+            age: 20,
+            isGood: false
+          })]
         }
       )
-      expect(Person.getAnnotation().value() === 'superman').toBeTruthy()
-    })
-    it('Assign two value', function () {
-      var annotation = _x.createAnnotation(
-        {
-          name: ''
-        }
-      )
-      var Person = _x.createCls(
-        {
-          annotations: [annotation('superman')]
-        }
-      )
-      expect(Person.getAnnotation().value() === 'superman').toBeTruthy()
-    })
-    it('Assign the default value', function () {
-      var annotation = _x.createAnnotation(
-        {
-          name: 'hello'
-        }
-      )
-      var Person = _x.createCls(
-        {
-          annotations: [annotation()]
-        }
-      )
-      expect(Person.getAnnotation().value() === 'hello').toBeTruthy()
+      expect(!Person._meta.isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person._meta.getAnnotationInstance(annotation).name === 'xman').toBeTruthy()
     })
   })
 })
