@@ -1371,23 +1371,30 @@
       }
       root.createAnnotation = function (metaInfo) {
         var extractionResult
+        var Annotation
 
         function build (cleanMetaInfo) {
-          var Annotation = function () {
+          Annotation = function (properties) {
+            properties = _.isEmpty(properties) ? {} : properties
             var me = this
             _.forEach(cleanMetaInfo.props,
               function (prop, index) {
-                me[prop.name] = prop.defaultValue
+                Object.defineProperty(me, prop.name, {
+                  enumerable: true,
+                  configurable: false,
+                  get: function () {
+                    return _.get(properties, prop.name, prop.defaultValue)
+                  }
+                })
               }
             )
-            return me
           }
           Annotation.prototype = _.create(XAnnotation)
           Annotation._meta = {
             props: {}
           }
-          Annotation.inst = function () {
-            return new Annotation()
+          Annotation.inst = function (properties) {
+            return new Annotation(properties)
           }
           _.forEach(cleanMetaInfo.props,
             function (prop, index) {

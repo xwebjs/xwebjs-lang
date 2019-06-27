@@ -20,7 +20,7 @@ describe('Declare annotation', function () {
       expect(annotation._meta.props.name.name === 'name').toBeTruthy()
       expect(annotation._meta.props.name.type === 'string').toBeTruthy()
       expect(annotation._meta.props.name.defaultValue === 'superman').toBeTruthy()
-      var annotationInstance = annotation()
+      var annotationInstance = annotation.inst()
       expect(annotationInstance.name === 'superman').toBeTruthy()
     })
     it('Declare annotation with multiple properties', function () {
@@ -32,7 +32,7 @@ describe('Declare annotation', function () {
         }
       })
       expect(_x.isAnnotation(annotation)).toBeTruthy()
-      var annotationInstance = annotation()
+      var annotationInstance = annotation.inst()
       expect(annotation._meta.props.name.name === 'name').toBeTruthy()
       expect(annotation._meta.props.name.type === 'string').toBeTruthy()
       expect(annotation._meta.props.name.defaultValue === 'superman').toBeTruthy()
@@ -96,7 +96,7 @@ describe('Declare annotation', function () {
           })]
         }
       )
-      expect(!Person._meta.isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person._meta.isAnnotationPresent(annotation)).toBeTruthy()
       expect(Person._meta.getAnnotationInstance(annotation).name === 'xman').toBeTruthy()
     })
   })
