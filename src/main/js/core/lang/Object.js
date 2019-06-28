@@ -4,6 +4,6 @@ _x.exportModule(
     ]
   },
   function () {
-    return _x.rootType
+    return _x.XObject
   }
 )

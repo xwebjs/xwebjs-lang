@@ -6,21 +6,16 @@ describe('Declare annotation', function () {
     jasmine.addMatchers(methodMetaMatchers)
   })
   describe('Declare annotation', function () {
-    it('Simple annotation', function () {
-      var annotation = _x.createAnnotation()
-      expect(_x.isAnnotation(annotation)).toBeTruthy()
-    })
     it('Declare annotation with one property', function () {
       var annotation = _x.createAnnotation({
         props: {
           name: 'superman'
         }
       })
-      expect(_x.isAnnotation(annotation)).toBeTruthy()
-      expect(annotation._meta.props.name.name === 'name').toBeTruthy()
-      expect(annotation._meta.props.name.type === 'string').toBeTruthy()
-      expect(annotation._meta.props.name.defaultValue === 'superman').toBeTruthy()
-      var annotationInstance = annotation.inst()
+      expect(annotation.getProperties()['name'].type === 'string').toBeTruthy()
+      expect(annotation.getProperties()['name'].defaultValue === 'superman').toBeTruthy()
+
+      var annotationInstance = annotation.valueOf()
       expect(annotationInstance.name === 'superman').toBeTruthy()
     })
     it('Declare annotation with multiple properties', function () {
@@ -31,21 +26,16 @@ describe('Declare annotation', function () {
           isGood: false
         }
       })
-      expect(_x.isAnnotation(annotation)).toBeTruthy()
-      var annotationInstance = annotation.inst()
-      expect(annotation._meta.props.name.name === 'name').toBeTruthy()
-      expect(annotation._meta.props.name.type === 'string').toBeTruthy()
-      expect(annotation._meta.props.name.defaultValue === 'superman').toBeTruthy()
-      expect(annotationInstance.name === 'superman').toBeTruthy()
+      var annotationInstance = annotation.valueOf()
+      expect(annotation.getProperties()['name'].type === 'string').toBeTruthy()
+      expect(annotation.getProperties()['name'].defaultValue === 'superman').toBeTruthy()
 
-      expect(annotation._meta.props.age.name === 'age').toBeTruthy()
-      expect(annotation._meta.props.age.type === 'number').toBeTruthy()
-      expect(annotation._meta.props.age.defaultValue === 19).toBeTruthy()
+      expect(annotation.getProperties()['age'].type === 'number').toBeTruthy()
+      expect(annotation.getProperties()['age'].defaultValue === 19).toBeTruthy()
       expect(annotationInstance.age === 19).toBeTruthy()
 
-      expect(annotation._meta.props.isGood.name === 'isGood').toBeTruthy()
-      expect(annotation._meta.props.isGood.type === 'boolean').toBeTruthy()
-      expect(annotation._meta.props.isGood.defaultValue === false).toBeTruthy()
+      expect(annotation.getProperties()['isGood'].type === 'boolean').toBeTruthy()
+      expect(annotation.getProperties()['isGood'].defaultValue === false).toBeTruthy()
       expect(annotationInstance.isGood === false).toBeTruthy()
     })
   })
@@ -54,7 +44,7 @@ describe('Declare annotation', function () {
       var annotation = _x.createAnnotation()
       var Person = _x.createCls(
         {
-          annotations: [annotation.inst()]
+          annotations: [annotation.valueOf()]
         }
       )
       expect(Person._meta.isAnnotationPresent(annotation)).toBeTruthy()
@@ -73,7 +63,7 @@ describe('Declare annotation', function () {
       var annotation1 = _x.createAnnotation()
       var Person = _x.createCls(
         {
-          annotations: [annotation.inst(), annotation1.inst()]
+          annotations: [annotation.valueOf(), annotation1.valueOf()]
         }
       )
       expect(Person._meta.isAnnotationPresent(annotation)).toBeTruthy()
@@ -89,7 +79,7 @@ describe('Declare annotation', function () {
       })
       var Person = _x.createCls(
         {
-          annotations: [annotation.inst({
+          annotations: [annotation.valueOf({
             name: 'xman',
             age: 20,
             isGood: false

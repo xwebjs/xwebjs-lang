@@ -4,15 +4,15 @@
     var gRoot = this
     var configuration = {}
     var metaExtractFunction
-    var classMetaExtractionRule, ifMetaExtractionRule, annotationExtractionRule
-    var RootType, XFace, XAnnotation
+    var classMetaExtractionRule, ifMetaExtractionRule, structureExtractionRule
+    var XObject, XFace, XStructure
     var commonUtil, methodUtil, annotationUtil
     var exportedUtil = {}
     var dependencyChecker
     var runningModel
     var __runtime
     var vType = ['string', 'number', 'boolean', 'object', 'class',
-      'function', 'struct', 'array', 'any']
+      'function', 'structure', 'array', 'any']
 
     var RUNNING_MODE = {
       DEBUG: 'DEBUG',
@@ -94,7 +94,7 @@
               type = 'function'
             }
           } else if (type === 'object') {
-            if (value instanceof RootType) {
+            if (value instanceof XObject) {
               type = value._getClassType()
             } else if (value instanceof XFace) {
               type = value
@@ -126,7 +126,7 @@
             // compare primitive object
             (
               type === 'object' && _.lowerCase(typeof value) === 'object' &&
-              !(value instanceof RootType)
+              !(value instanceof XObject)
             ) ||
             // compare class type
             (
@@ -136,7 +136,7 @@
             // compare interface type
             (
               _.isObject(type) && (type instanceof XFace) &&
-              (value instanceof RootType) && value._supportInterfaceOf(type)
+              (value instanceof XObject) && value._supportInterfaceOf(type)
             )
           ) {
             result = true
@@ -485,7 +485,7 @@
             }
           }
         })()
-        annotationExtractionRule = {
+        structureExtractionRule = {
           isMultiple: false,
           childElements: {
             mixins: {
@@ -673,9 +673,9 @@
           return extractionResult
         }
       }
-      var initRootType = function () {
+      var initXObject = function () {
         // eslint-disable-next-line lodash/prefer-noop
-        RootType = function () {}
+        XObject = function () {}
       }
       var initXFace = function () {
         function getMethods (face) {
@@ -695,7 +695,7 @@
           this.parentIfs = parentInfo
           this.isCustomIf = true
         }
-        XFace.prototype = _.create(RootType)
+        XFace.prototype = _.create(XObject)
         XFace.prototype.getValue = function (propName) {
           var searchResult = _.find(this.props, ['name', propName])
           if (searchResult) {
@@ -720,10 +720,6 @@
           )
         }
       }
-      var initXAnnotation = function () {
-        // eslint-disable-next-line lodash/prefer-noop
-        XAnnotation = function () {}
-      }
 
       checkDependency()
       prepareRuntimeManager()
@@ -732,9 +728,8 @@
       initUtil()
       initExportedUtil()
 
-      initRootType()
+      initXObject()
       initXFace()
-      initXAnnotation()
 
       initConfiguration()
       prepareExtractionFunction()
@@ -869,9 +864,9 @@
                       (_.includes(['string', 'number', 'boolean'],
                         valueTypeOfValue) && valueTypeOfValue) ||
                       (valueTypeOfValue === 'object' &&
-                        (value instanceof RootType) && 'Class') ||
+                        (value instanceof XObject) && 'Class') ||
                       (valueTypeOfValue === 'object' &&
-                        !(value instanceof RootType) && 'object') ||
+                        !(value instanceof XObject) && 'object') ||
                       (valueTypeOfValue === 'function' &&
                         !(value.isCustomClass) && 'function') ||
                       (valueTypeOfValue === 'function' && value.isCustomClass &&
@@ -1242,7 +1237,7 @@
               XClass.prototype = _.create(Error.prototype)
             }
           } else {
-            XClass.prototype = _.create(RootType.prototype)
+            XClass.prototype = _.create(XObject.prototype)
           }
 
           XClass.prototype._construct = function () {
@@ -1369,12 +1364,18 @@
           throw Error(result)
         }
       }
-      root.createAnnotation = function (metaInfo) {
+      root.createStructure = function (metaInfo) {
         var extractionResult
-        var Annotation
+        var Structure
+        var metaProperties = {}
 
         function build (cleanMetaInfo) {
-          Annotation = function (properties) {
+          _.forEach(cleanMetaInfo.props,
+            function (prop, index) {
+              metaProperties[prop.name] = prop
+            }
+          )
+          Structure = function (properties) {
             properties = _.isEmpty(properties) ? {} : properties
             var me = this
             _.forEach(cleanMetaInfo.props,
@@ -1384,39 +1385,66 @@
                   configurable: false,
                   get: function () {
                     return _.get(properties, prop.name, prop.defaultValue)
+                  },
+                  set: function (v) {
+                    _.set(properties, prop.name, v)
                   }
                 })
               }
             )
           }
-          Annotation.prototype = _.create(XAnnotation)
-          Annotation._meta = {
+          Structure.prototype = _.create(XStructure)
+          Structure._meta = {
             props: {}
           }
-          Annotation.inst = function (properties) {
-            return new Annotation(properties)
+          Structure.valueOf = function (properties) {
+            _.forEach(properties,
+              function (value, key) {
+                if (
+                  !_.find(
+                    cleanMetaInfo.props,
+                    ['name', key]
+                  )) {
+                  throw new Error(
+                    'the property name "' +
+                    key +
+                    '" is not valid property name in the structure')
+                }
+              }
+            )
+
+            return new Structure(properties)
           }
-          _.forEach(cleanMetaInfo.props,
-            function (prop, index) {
-              Annotation._meta.props[prop.name] = prop
-            }
-          )
-          Annotation.isAnnotation = true
-          return Annotation
+          Structure.getProperties = function () {
+            return metaProperties
+          }
+          Structure.isStructureure = true
+          return Structure
         }
 
-        extractionResult = metaExtractFunction(metaInfo, null, annotationExtractionRule)
+        extractionResult = metaExtractFunction(metaInfo, null, structureExtractionRule)
         return build(extractionResult.resultMetaInfo)
       }
-
+      root.createAnnotation = function (metaInfo) {
+        var Annotation = root.createStructure(metaInfo)
+        Annotation.isStructureure = undefined
+        Annotation.isAnnotation = true
+        return Annotation
+      }
       root.isCustomClass = function (cls) {
         return cls && cls.isCustomClass
+      }
+      root.isTypeOfClass = function (obj) {
+        return obj && obj instanceof XObject
       }
       root.isCustomIf = function (customIf) {
         return customIf && customIf.isCustomIf
       }
-      root.isAnnotation = function (annotation) {
-        return annotation && annotation.isAnnotation
+      root.isStructure = function (structure) {
+        return structure && structure.isStructureure
+      }
+      root.isTypeOfStructure = function (obj) {
+        return obj instanceof XStructure
       }
       root.util = (function () {
         return exportedUtil
@@ -1428,7 +1456,7 @@
         throw new Error('xwebjs only works when _x is used as a global')
       }
       root.features = {}
-      root.rootType = RootType
+      root.XObject = XObject
       root.features.isLangCore = true
       return root
     }
