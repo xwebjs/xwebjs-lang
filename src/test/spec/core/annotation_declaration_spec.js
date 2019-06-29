@@ -39,7 +39,7 @@ describe('Declare annotation', function () {
       expect(annotationInstance.isGood === false).toBeTruthy()
     })
   })
-  describe('Check the annotation on class', function () {
+  describe('Use annotation on the class', function () {
     it('Check whether the class has specific annotation when having only one annotation', function () {
       var annotation = _x.createAnnotation()
       var Person = _x.createCls(
@@ -88,6 +88,26 @@ describe('Declare annotation', function () {
       )
       expect(Person._meta.isAnnotationPresent(annotation)).toBeTruthy()
       expect(Person._meta.getAnnotationInstance(annotation).name === 'xman').toBeTruthy()
+    })
+  })
+  describe('Reference the annotation', function () {
+    it('Check whether the class has specific annotation when having only one annotation', function () {
+      var annotation = _x.createAnnotation()
+      var Person = _x.createCls(
+        {
+          methods: [
+            {
+              name: 'speak',
+              annotations: [annotation.valueOf()],
+              method: function () {
+                spyBox.methodA()
+              }
+            }
+          ]
+        }
+      )
+      var person = new Person()
+      expect(person.speak._meta.isAnnotationPresent(annotation)).toBeTruthy()
     })
   })
 })

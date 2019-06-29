@@ -297,6 +297,15 @@
           }
         }
 
+        var annotationPropertiesRule = {
+          annotations: {
+            isMultiple: true,
+            returnValue: function (value) {
+              return value
+            }
+          }
+        }
+
         var propertyRuleElements = {
           isMultiple: true,
           processEachObjectKeyElement: function (key, info) {
@@ -375,22 +384,25 @@
           }
           return methodInfo
         }
-        var methodRuleElement = {
-          name: {
-            returnValue: returnName
-          },
-          params: {
-            isMultiple: true,
-            childElements: {
-              type: {
-                returnValue: returnType
+        var methodRuleElement = _.assign(
+          {
+            name: {
+              returnValue: returnName
+            },
+            params: {
+              isMultiple: true,
+              childElements: {
+                type: {
+                  returnValue: returnType
+                }
               }
+            },
+            method: {
+              returnValue: returnMethod
             }
           },
-          method: {
-            returnValue: returnMethod
-          }
-        }
+          annotationPropertiesRule
+        )
         var methodRuleElements = {
           isMultiple: true,
           beforeProcessAllItems: function (metaData) {
@@ -438,52 +450,49 @@
           }
         })()
         classMetaExtractionRule = (function () {
-          return {
-            isMultiple: false,
-            childElements: {
-              implements: {
-                isMultiple: true,
-                returnValue: function (value) {
-                  return value
-                }
-              },
-              annotations: {
-                isMultiple: true,
-                returnValue: function (value) {
-                  return value
-                }
-              },
-              props: propertyRuleElements,
-              staticProps: propertyRuleElements,
-              methods: methodRuleElements,
-              staticMethods: methodRuleElements,
-              construct: _.assign(
-                _.clone(methodRuleElements),
-                {
-                  beforeProcessAllItems: function (metaData) {
-                    if (_.isArray(metaData)) {
-                      return metaData
-                    } else {
-                      return [metaData]
-                    }
-                  },
-                  beforeProcessEachItem: function (metaData) {
-                    metaData.name = 'construct'
-                    return metaData
+          return _.assign(
+            {
+              isMultiple: false,
+              childElements: {
+                implements: {
+                  isMultiple: true,
+                  returnValue: function (value) {
+                    return value
                   }
-                }
-              ),
-              name: {
-                returnValue: function (srcNodeInfo) {
-                  if (_.isString(srcNodeInfo)) {
-                    return srcNodeInfo
-                  } else {
-                    return undefined
+                },
+                props: propertyRuleElements,
+                staticProps: propertyRuleElements,
+                methods: methodRuleElements,
+                staticMethods: methodRuleElements,
+                construct: _.assign(
+                  _.clone(methodRuleElements),
+                  {
+                    beforeProcessAllItems: function (metaData) {
+                      if (_.isArray(metaData)) {
+                        return metaData
+                      } else {
+                        return [metaData]
+                      }
+                    },
+                    beforeProcessEachItem: function (metaData) {
+                      metaData.name = 'construct'
+                      return metaData
+                    }
+                  }
+                ),
+                name: {
+                  returnValue: function (srcNodeInfo) {
+                    if (_.isString(srcNodeInfo)) {
+                      return srcNodeInfo
+                    } else {
+                      return undefined
+                    }
                   }
                 }
               }
-            }
-          }
+            },
+            annotationPropertiesRule
+          )
         })()
         structureExtractionRule = {
           isMultiple: false,
@@ -1149,6 +1158,19 @@
       root.createCls = function (metaInfo, parentClass) {
         var extractionResult, parentClassInfo, builtCls
 
+        var getAnnotationProperties = function (metaInfo) {
+          return {
+            isAnnotationPresent: function (annotation) {
+              return Boolean(
+                annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
+              )
+            },
+            getAnnotationInstance: function (annotation) {
+              return annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
+            }
+          }
+        }
+
         function build (cleanMetaInfo, parentClass) {
           var XClass
           var methodMap
@@ -1269,30 +1291,30 @@
           methodMap[methodContainerType.methodTypeInstance] = clsMethodUtil.makeMethodMap(
             metaMethodsInfo)
           _.forEach(metaMethodsInfo, function (methodInfo) {
+            var methodDef, methodMeta
             XClass.prototype[methodInfo.name] = (function () {
               return function () {
                 return clsMethodUtil.executeInstanceMethod(XClass, this, methodInfo.name, arguments)
               }
             })()
+            methodMeta = _.clone(methodInfo)
+            methodDef = XClass.prototype[methodInfo.name]
+            methodDef._meta = _.assign(methodMeta, getAnnotationProperties(methodInfo))
           })
 
           // adding meta property to the class
-          XClass._meta = {
-            classInfo: cleanMetaInfo,
-            methodMap: methodMap,
-            implements: (_.isEmpty(cleanMetaInfo.implements)
-              ? []
-              : cleanMetaInfo.implements),
-            parentClass: parentClass,
-            isAnnotationPresent: function (annotation) {
-              return Boolean(
-                annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
-              )
+          XClass._meta = _.assign(
+            {
+              classInfo: cleanMetaInfo,
+              methodMap: methodMap,
+              implements: (_.isEmpty(cleanMetaInfo.implements)
+                ? []
+                : cleanMetaInfo.implements),
+              parentClass: parentClass
             },
-            getAnnotationInstance: function (annotation) {
-              return annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
-            }
-          }
+            getAnnotationProperties(metaInfo)
+          )
+
           cleanMetaInfo.implements = undefined
           XClass.isCustomClass = true
 
