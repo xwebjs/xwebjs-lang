@@ -95,7 +95,7 @@
             }
           } else if (type === 'object') {
             if (value instanceof XObject) {
-              type = value._getClassType()
+              type = value.self()
             } else if (value instanceof XFace) {
               type = value
             } else if (_.isNull(value)) {
@@ -347,7 +347,7 @@
             }
             return returnInfo
           },
-          childElements: {
+          childElements: _.assign({
             name: {
               returnValue: returnName
             },
@@ -365,7 +365,7 @@
             defaultValue: {
               returnValue: returnDefaultValue
             }
-          }
+          }, annotationPropertiesRule)
         }
         var processMethodInfoWithKey = function (info, key) {
           var methodInfo
@@ -391,17 +391,17 @@
             },
             params: {
               isMultiple: true,
-              childElements: {
-                type: {
-                  returnValue: returnType
-                }
-              }
+              childElements: _.assign({
+                  type: {
+                    returnValue: returnType
+                  }
+                }, annotationPropertiesRule
+              )
             },
             method: {
               returnValue: returnMethod
             }
-          },
-          annotationPropertiesRule
+          }, annotationPropertiesRule
         )
         var methodRuleElements = {
           isMultiple: true,
@@ -686,6 +686,10 @@
         // eslint-disable-next-line lodash/prefer-noop
         XObject = function () {}
       }
+      var initXStructure = function () {
+        // eslint-disable-next-line lodash/prefer-noop
+        XStructure = function () {}
+      }
       var initXFace = function () {
         function getMethods (face) {
           var methods = []
@@ -739,13 +743,14 @@
 
       initXObject()
       initXFace()
+      initXStructure()
 
       initConfiguration()
       prepareExtractionFunction()
     }
 
     function setup () {
-      var methodContainerType = {
+      var MethodContainerType = {
         methodTypeInstance: 0,
         methodTypeStatic: 1,
         methodTypeConstruct: 2
@@ -761,7 +766,7 @@
           }
         },
         _checkIfs: function (classRef) {
-          var faces = classRef._meta.implements
+          var faces = classRef.class.implements
           var errors = []
           if (!_.isEmpty(faces)) {
             _.forEach(faces, function (faceRef) {
@@ -776,7 +781,7 @@
         },
         _validateClassFaceImplementation: function (classRef, faceRef) {
           var faceMethods = faceRef.getMethods()
-          var classMethods = classRef._meta.classInfo.methods
+          var classMethods = classRef.class.classInfo.methods
           var errors = []
           _.forEach(
             faceMethods,
@@ -827,8 +832,8 @@
           function addProperties (eachClassMeta) {
             var metaInfo = eachClassMeta.classInfo
             var parentClass = eachClassMeta.parentClass
-            if (parentClass && parentClass.isCustomClass && parentClass._meta) {
-              addProperties(parentClass._meta)
+            if (parentClass && parentClass.isCustomClass && parentClass.class) {
+              addProperties(parentClass.class)
             }
             _.forEach(metaInfo.props, function (propInfo) {
               propertyTypeInfo[propInfo.name] = propInfo.type
@@ -937,7 +942,7 @@
       }
       var clsMethodUtil = {
         getMethodFromMap: function (methodName, params, methodType, map) {
-          var mapType = methodType || methodContainerType.methodTypeInstance
+          var mapType = methodType || MethodContainerType.methodTypeInstance
           var methodNameIndex = map[mapType][methodName]
           var findResult
           var result = {
@@ -969,22 +974,18 @@
               methodNameIndex = {}
               map[methodInfo.name] = methodNameIndex
             }
-            if (
-              _.isArray(methodInfo.params) && methodInfo.params.length > 0
-            ) {
-              var methodParamLengthIndex
-              // create param index if the method has the params
-              if (!(methodParamLengthIndex = methodNameIndex[methodInfo.params.length])) {
-                methodParamLengthIndex = []
-                methodNameIndex[methodInfo.params.length] = methodParamLengthIndex
-              }
-              methodParamLengthIndex.push({
-                params: methodInfo.params,
-                method: methodInfo.method
-              })
-            } else {
-              methodNameIndex[0] = methodInfo.method
+            var methodParamLengthIndex
+            // create param index if the method has the params
+            var paramLength = _.isArray(methodInfo.params) ? methodInfo.params.length : 0
+            if (!(methodParamLengthIndex = methodNameIndex[paramLength])) {
+              methodParamLengthIndex = []
+              methodNameIndex[paramLength] = methodParamLengthIndex
             }
+            methodParamLengthIndex.push({
+              params: methodInfo.params,
+              methodFn: methodInfo.method,
+              annotations: methodInfo.annotations
+            })
           })
           return map
         },
@@ -998,15 +999,15 @@
             methodName,
             args,
             methodType,
-            tClass._meta.methodMap
+            tClass.class.methodMap
           )
           if (searchResult.isFound) {
             result.method = searchResult.method
             result.isFound = true
           } else {
-            if (tClass._meta.parentClass) {
+            if (tClass.class.parentClass) {
               return clsMethodUtil.findMethodFromClass(
-                tClass._meta.parentClass,
+                tClass.class.parentClass,
                 methodName, methodType, args
               )
             } else {
@@ -1023,8 +1024,8 @@
         executeInstanceMethod: function (targetClass, targetClassInstance, methodName, args) {
           var executionResult
           var methodType = methodName === 'construct'
-            ? methodContainerType.methodTypeConstruct
-            : methodContainerType.methodTypeInstance
+            ? MethodContainerType.methodTypeConstruct
+            : MethodContainerType.methodTypeInstance
           var searchResult = clsMethodUtil.findMethodFromClass(
             targetClass,
             methodName,
@@ -1033,10 +1034,10 @@
           )
           if (searchResult.isFound) {
             clsMethodUtil.recordMethodCall('before', methodName,
-              arguments, searchResult.method, targetClassInstance, targetClass)
-            executionResult = searchResult.method.apply(targetClassInstance, args, targetClass)
+              arguments, searchResult.method.methodFn, targetClassInstance, targetClass)
+            executionResult = searchResult.method.methodFn.apply(targetClassInstance, args, targetClass)
             clsMethodUtil.recordMethodCall('after', methodName,
-              arguments, searchResult.method, targetClassInstance, targetClass)
+              arguments, searchResult.method.methodFn, targetClassInstance, targetClass)
             return executionResult
           } else {
             if (!_.isEmpty(searchResult.errors)) {
@@ -1054,22 +1055,21 @@
           // used to skip search if the method has been found
           var isMethodFound
           var paramMethods = declaredMethods[rawParams.length]
-
-          if (_.isFunction(paramMethods)) {
-            result.method = paramMethods
-          } else if (_.isArray(paramMethods)) {
-            _.forEach(paramMethods, function (paramMethod) {
-              var paramsInfo = paramMethod.params
-              // used for determining the fully match  after checking every parameter
-              var isMatched
-              // used for the judgement of stop continuing check on the rest parameter
-              // if the one of them is not matched already
-              var continueCheck = true
-              // if the method is already found in the previous iteration check
-              // then will exit the current function
-              if (isMethodFound) {
-                return
-              }
+          _.forEach(paramMethods, function (paramMethod) {
+            var paramsInfo = paramMethod.params
+            // used for determining the fully match  after checking every parameter
+            var isMatched
+            // used for the judgement of stop continuing check on the rest parameter
+            // if the one of them is not matched already
+            var continueCheck = true
+            // if the method is already found in the previous iteration check
+            // then will exit the current function
+            if (isMethodFound) {
+              return
+            }
+            if (_.isUndefined(paramsInfo) || _.isEmpty(paramsInfo)) {
+              isMatched = true
+            } else {
               _.forEach(paramsInfo, function (paramInfo, paramIndex) {
                 var rawParam = rawParams[paramIndex]
                 if (!continueCheck) {
@@ -1085,14 +1085,12 @@
                     ' is not matched with expected parameter type'
                 }
               })
-              if (isMatched) {
-                result.method = paramMethod.method
-                isMethodFound = true
-              }
-            })
-          } else {
-            result.errors = 'it is unexpected that no related params method information available'
-          }
+            }
+            if (isMatched) {
+              result.method = paramMethod
+              isMethodFound = true
+            }
+          })
           return result
         },
         getCurrentMethodCallInfo: function (context) {
@@ -1158,7 +1156,7 @@
       root.createCls = function (metaInfo, parentClass) {
         var extractionResult, parentClassInfo, builtCls
 
-        var getAnnotationProperties = function (metaInfo) {
+        var annotationCapabilities = function (metaInfo) {
           return {
             isAnnotationPresent: function (annotation) {
               return Boolean(
@@ -1181,29 +1179,29 @@
             var searchResult = clsMethodUtil.getMethodFromMap(
               'construct',
               arguments,
-              methodContainerType.methodTypeConstruct,
+              MethodContainerType.methodTypeConstruct,
               methodMap
             )
             clsPropertyUtil.assignProperties(
-              XClass._meta, this, allProperties, allNonSharedValueProperties
+              XClass.class, this, allProperties, allNonSharedValueProperties
             )
             this.$ = XClass._statics
             this.__runtime = {}
             if (searchResult.isFound) {
               clsMethodUtil.recordMethodCall('before', 'construct', arguments,
-                searchResult.method, this, XClass)
-              searchResult.method.apply(this, arguments)
+                searchResult.method.methodFn, this, XClass)
+              searchResult.method.methodFn.apply(this, arguments)
               clsMethodUtil.recordMethodCall('after', 'construct', arguments,
-                searchResult.method, this, XClass)
+                searchResult.method.methodFn, this, XClass)
             }
           }
           methodMap = {}
-          _.forEach(methodContainerType, function (value) {
+          _.forEach(MethodContainerType, function (value) {
             methodMap[value] = {}
           })
 
           // populate constructor methods
-          methodMap[methodContainerType.methodTypeConstruct] = clsMethodUtil.makeMethodMap(
+          methodMap[MethodContainerType.methodTypeConstruct] = clsMethodUtil.makeMethodMap(
             cleanMetaInfo.construct)
 
           // populate static properties
@@ -1231,7 +1229,7 @@
 
           // populate static methods
           var metaStaticMethodsInfo = cleanMetaInfo.staticMethods
-          methodMap[methodContainerType.methodTypeStatic] = clsMethodUtil.makeMethodMap(
+          methodMap[MethodContainerType.methodTypeStatic] = clsMethodUtil.makeMethodMap(
             metaStaticMethodsInfo)
           _.forEach(metaStaticMethodsInfo, function (methodInfo) {
             XClass[methodInfo.name] = (function (pMethodInfo) {
@@ -1239,11 +1237,11 @@
                 var searchResult = clsMethodUtil.getMethodFromMap(
                   pMethodInfo.name,
                   arguments,
-                  methodContainerType.methodTypeStatic,
+                  MethodContainerType.methodTypeStatic,
                   methodMap
                 )
                 if (searchResult.isFound) {
-                  return searchResult.method.apply(this, arguments)
+                  return searchResult.method.methodFn.apply(this, arguments)
                 } else {
                   throw Error(searchResult.errors)
                 }
@@ -1272,7 +1270,7 @@
           XClass.prototype._callParent = function () {
             var methodName
             var currentCallInfo = clsMethodUtil.getCurrentMethodCallInfo(this)
-            var targetCls = currentCallInfo.targetCls._meta.parentClass
+            var targetCls = currentCallInfo.targetCls.class.parentClass
             if (_.isEmpty(targetCls)) {
               throw new Error('Parent class is not found')
             }
@@ -1288,34 +1286,40 @@
 
           // populate instance methods
           var metaMethodsInfo = cleanMetaInfo.methods
-          methodMap[methodContainerType.methodTypeInstance] = clsMethodUtil.makeMethodMap(
+          methodMap[MethodContainerType.methodTypeInstance] = clsMethodUtil.makeMethodMap(
             metaMethodsInfo)
           _.forEach(metaMethodsInfo, function (methodInfo) {
-            var methodDef, methodMeta
             XClass.prototype[methodInfo.name] = (function () {
               return function () {
                 return clsMethodUtil.executeInstanceMethod(XClass, this, methodInfo.name, arguments)
               }
             })()
-            methodMeta = _.clone(methodInfo)
-            methodDef = XClass.prototype[methodInfo.name]
-            methodDef._meta = _.assign(methodMeta, getAnnotationProperties(methodInfo))
           })
 
           // adding meta property to the class
-          XClass._meta = _.assign(
+          XClass.class = _.assign(
             {
               classInfo: cleanMetaInfo,
               methodMap: methodMap,
               implements: (_.isEmpty(cleanMetaInfo.implements)
                 ? []
                 : cleanMetaInfo.implements),
-              parentClass: parentClass
+              parentClass: parentClass,
+              getInstanceMethod: function (name, args) {
+                var searchResult = clsMethodUtil.getMethodFromMap(
+                  name, args || [], MethodContainerType.methodTypeInstance, methodMap
+                )
+                var rawMethodMeta = searchResult.method
+                return _.assign(rawMethodMeta, annotationCapabilities(rawMethodMeta))
+              },
+              getProperty: function (name) {
+                var rawPropertyMeta = _.find(cleanMetaInfo.props, { 'name': name })
+                return _.assign(rawPropertyMeta, annotationCapabilities(rawPropertyMeta))
+              }
             },
-            getAnnotationProperties(metaInfo)
+            annotationCapabilities(metaInfo)
           )
 
-          cleanMetaInfo.implements = undefined
           XClass.isCustomClass = true
 
           // add newInstance method
@@ -1324,22 +1328,24 @@
             XClass.apply(instance, arguments)
             return instance
           }
-
           // add tools set
-          XClass.prototype._getClassType = function () {
+          XClass.prototype.self = function () {
             return XClass
           }
-          XClass.prototype.$ = function () {
-            return XClass.prototype._getClassType().$.apply(this, arguments)
+          XClass.prototype.$ = XClass.prototype.self = function () {
+            return XClass
+          }
+          XClass.prototype.getXClass = function () {
+            return XClass.class
           }
           XClass.prototype._supportInterfaceOf = function (face) {
             function hasIf (cls) {
-              if (!_.isEmpty(cls._meta.implements)) {
-                if (_.includes(cls._meta.implements, face)) {
+              if (!_.isEmpty(cls.class.implements)) {
+                if (_.includes(cls.class.implements, face)) {
                   return true
                 } else {
-                  if (!_.isEmpty(cls._meta.parentClass)) {
-                    return hasIf(cls._meta.parentClass)
+                  if (!_.isEmpty(cls.class.parentClass)) {
+                    return hasIf(cls.class.parentClass)
                   } else {
                     return false
                   }
@@ -1416,7 +1422,7 @@
             )
           }
           Structure.prototype = _.create(XStructure)
-          Structure._meta = {
+          Structure.class = {
             props: {}
           }
           Structure.valueOf = function (properties) {
