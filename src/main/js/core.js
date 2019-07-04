@@ -7,6 +7,7 @@
     var classMetaExtractionRule, ifMetaExtractionRule, structureExtractionRule
     var XObject, XFace, XStructure
     var commonUtil, methodUtil, annotationUtil
+    var withAnnotationCapabilities
     var exportedUtil = {}
     var dependencyChecker
     var runningModel
@@ -750,10 +751,10 @@
     }
 
     function setup () {
-      var MethodContainerType = {
-        methodTypeInstance: 0,
-        methodTypeStatic: 1,
-        methodTypeConstruct: 2
+      var MethodType = {
+        INSTANCE: 0,
+        STATIC: 1,
+        CONSTRUCT: 2
       }
       var clsValidator = {
         validate: function (classRef) {
@@ -940,9 +941,21 @@
           })
         }
       }
+      withAnnotationCapabilities = function (metaInfo) {
+        return {
+          isAnnotationPresent: function (annotation) {
+            return Boolean(
+              annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
+            )
+          },
+          getAnnotationInstance: function (annotation) {
+            return annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
+          }
+        }
+      }
       var clsMethodUtil = {
         getMethodFromMap: function (methodName, params, methodType, map) {
-          var mapType = methodType || MethodContainerType.methodTypeInstance
+          var mapType = methodType || MethodType.INSTANCE
           var methodNameIndex = map[mapType][methodName]
           var findResult
           var result = {
@@ -981,10 +994,21 @@
               methodParamLengthIndex = []
               methodNameIndex[paramLength] = methodParamLengthIndex
             }
+            var methodParams
+            if (_.isArray(methodInfo.params)) {
+              methodParams = _.map(
+                methodInfo.params,
+                function (param) {
+                  return _.assign(param, withAnnotationCapabilities(param))
+                })
+            }
             methodParamLengthIndex.push({
-              params: methodInfo.params,
+              params: methodParams,
               methodFn: methodInfo.method,
-              annotations: methodInfo.annotations
+              annotations: methodInfo.annotations,
+              getParams: function () {
+                return this.params
+              }
             })
           })
           return map
@@ -1024,8 +1048,8 @@
         executeInstanceMethod: function (targetClass, targetClassInstance, methodName, args) {
           var executionResult
           var methodType = methodName === 'construct'
-            ? MethodContainerType.methodTypeConstruct
-            : MethodContainerType.methodTypeInstance
+            ? MethodType.CONSTRUCT
+            : MethodType.INSTANCE
           var searchResult = clsMethodUtil.findMethodFromClass(
             targetClass,
             methodName,
@@ -1156,19 +1180,6 @@
       root.createCls = function (metaInfo, parentClass) {
         var extractionResult, parentClassInfo, builtCls
 
-        var annotationCapabilities = function (metaInfo) {
-          return {
-            isAnnotationPresent: function (annotation) {
-              return Boolean(
-                annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
-              )
-            },
-            getAnnotationInstance: function (annotation) {
-              return annotationUtil.annotationPresentCheckFn(annotation, metaInfo)
-            }
-          }
-        }
-
         function build (cleanMetaInfo, parentClass) {
           var XClass
           var methodMap
@@ -1179,7 +1190,7 @@
             var searchResult = clsMethodUtil.getMethodFromMap(
               'construct',
               arguments,
-              MethodContainerType.methodTypeConstruct,
+              MethodType.CONSTRUCT,
               methodMap
             )
             clsPropertyUtil.assignProperties(
@@ -1196,12 +1207,12 @@
             }
           }
           methodMap = {}
-          _.forEach(MethodContainerType, function (value) {
+          _.forEach(MethodType, function (value) {
             methodMap[value] = {}
           })
 
           // populate constructor methods
-          methodMap[MethodContainerType.methodTypeConstruct] = clsMethodUtil.makeMethodMap(
+          methodMap[MethodType.CONSTRUCT] = clsMethodUtil.makeMethodMap(
             cleanMetaInfo.construct)
 
           // populate static properties
@@ -1229,7 +1240,7 @@
 
           // populate static methods
           var metaStaticMethodsInfo = cleanMetaInfo.staticMethods
-          methodMap[MethodContainerType.methodTypeStatic] = clsMethodUtil.makeMethodMap(
+          methodMap[MethodType.STATIC] = clsMethodUtil.makeMethodMap(
             metaStaticMethodsInfo)
           _.forEach(metaStaticMethodsInfo, function (methodInfo) {
             XClass[methodInfo.name] = (function (pMethodInfo) {
@@ -1237,7 +1248,7 @@
                 var searchResult = clsMethodUtil.getMethodFromMap(
                   pMethodInfo.name,
                   arguments,
-                  MethodContainerType.methodTypeStatic,
+                  MethodType.STATIC,
                   methodMap
                 )
                 if (searchResult.isFound) {
@@ -1286,7 +1297,7 @@
 
           // populate instance methods
           var metaMethodsInfo = cleanMetaInfo.methods
-          methodMap[MethodContainerType.methodTypeInstance] = clsMethodUtil.makeMethodMap(
+          methodMap[MethodType.INSTANCE] = clsMethodUtil.makeMethodMap(
             metaMethodsInfo)
           _.forEach(metaMethodsInfo, function (methodInfo) {
             XClass.prototype[methodInfo.name] = (function () {
@@ -1305,19 +1316,42 @@
                 ? []
                 : cleanMetaInfo.implements),
               parentClass: parentClass,
-              getInstanceMethod: function (name, args) {
+              _getMethod: function (type, args) {
+                if (args.length < 1) {
+                  throw new Error('Must pass method name')
+                }
+                var methodName = args[0]
+                if (args.length > 1) {
+                  if (args.length === 2 && _.isArguments(args[1])) {
+                    args = args[1]
+                  } else {
+                    args = _.slice(args, 1)
+                  }
+                } else {
+                  args = []
+                }
                 var searchResult = clsMethodUtil.getMethodFromMap(
-                  name, args || [], MethodContainerType.methodTypeInstance, methodMap
+                  methodName, args, type, methodMap
                 )
                 var rawMethodMeta = searchResult.method
-                return _.assign(rawMethodMeta, annotationCapabilities(rawMethodMeta))
+                return _.assign(rawMethodMeta, withAnnotationCapabilities(rawMethodMeta))
               },
-              getProperty: function (name) {
+              getStaticMethod: function () {
+                return this._getMethod(MethodType.STATIC, arguments)
+              },
+              getInstanceMethod: function () {
+                return this._getMethod(MethodType.INSTANCE, arguments)
+              },
+              getInstanceProperty: function (name) {
                 var rawPropertyMeta = _.find(cleanMetaInfo.props, { 'name': name })
-                return _.assign(rawPropertyMeta, annotationCapabilities(rawPropertyMeta))
+                return _.assign(rawPropertyMeta, withAnnotationCapabilities(rawPropertyMeta))
+              },
+              getStaticProperty: function (name) {
+                var rawPropertyMeta = _.find(cleanMetaInfo.staticProps, { 'name': name })
+                return _.assign(rawPropertyMeta, withAnnotationCapabilities(rawPropertyMeta))
               }
             },
-            annotationCapabilities(metaInfo)
+            withAnnotationCapabilities(metaInfo)
           )
 
           XClass.isCustomClass = true

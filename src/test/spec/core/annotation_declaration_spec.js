@@ -134,7 +134,7 @@ describe('Declare annotation', function () {
       expect(person.getXClass().getInstanceMethod('speak').isAnnotationPresent(annotation)).toBeTruthy()
       expect(person.getXClass().getInstanceMethod('speak').getAnnotationInstance(annotation).name === 'superman').toBeTruthy()
       expect(person.getXClass().getInstanceMethod('speak').getAnnotationInstance(annotation).age === 19).toBeTruthy()
-      expect(person.class.getInstanceMethod('speak').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
+      expect(person.getXClass().getInstanceMethod('speak').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
     })
     it('Access the assigned value of annotation instance', function () {
       var annotation = _x.createAnnotation({
@@ -186,7 +186,7 @@ describe('Declare annotation', function () {
           ]
         }
       )
-      expect(Person.class.getMethod('speak').isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person.class.getStaticMethod('speak').isAnnotationPresent(annotation)).toBeTruthy()
     })
     it('Access the default value of annotation instance', function () {
       var annotation = _x.createAnnotation({
@@ -198,7 +198,7 @@ describe('Declare annotation', function () {
       })
       var Person = _x.createCls(
         {
-          methods: [
+          staticMethods: [
             {
               name: 'speak',
               annotations: [annotation.valueOf()],
@@ -209,10 +209,10 @@ describe('Declare annotation', function () {
           ]
         }
       )
-      expect(Person.class.getMethod('speak').isAnnotationPresent(annotation)).toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).name === 'superman').toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).age === 19).toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
+      expect(Person.class.getStaticMethod('speak').isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person.class.getStaticMethod('speak').getAnnotationInstance(annotation).name === 'superman').toBeTruthy()
+      expect(Person.class.getStaticMethod('speak').getAnnotationInstance(annotation).age === 19).toBeTruthy()
+      expect(Person.class.getStaticMethod('speak').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
     })
     it('Access the assigned value of annotation instance', function () {
       var annotation = _x.createAnnotation({
@@ -224,7 +224,7 @@ describe('Declare annotation', function () {
       })
       var Person = _x.createCls(
         {
-          methods: [
+          staticMethods: [
             {
               name: 'speak',
               annotations: [annotation.valueOf(
@@ -234,17 +234,28 @@ describe('Declare annotation', function () {
                   isGood: false
                 })
               ],
-              method: function () {
+              method: function (msg) {
                 spyBox.methodA()
-              }
+              },
+              params: [
+                {
+                  type: 'string'
+                }
+              ]
             }
           ]
         }
       )
-      expect(Person.class.getMethod('speak').isAnnotationPresent(annotation)).toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).name === 'xman').toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).age === 20).toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
+      expect(Person.class.getStaticMethod('speak', 'hello').isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person.class.getStaticMethod('speak', 'hello').getAnnotationInstance(annotation).name === 'xman').toBeTruthy()
+      expect(Person.class.getStaticMethod('speak', 'hello').getAnnotationInstance(annotation).age === 20).toBeTruthy()
+      expect(Person.class.getStaticMethod('speak', 'hello').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
+
+      function call (msg) {
+        expect(Person.class.getStaticMethod('speak', arguments).isAnnotationPresent(annotation)).toBeTruthy()
+      }
+
+      call('hello')
     })
   })
   describe('Use annotation on the class instance property', function () {
@@ -262,7 +273,7 @@ describe('Declare annotation', function () {
         }
       )
       var person = new Person()
-      expect(person.getXClass().getProperty('name').isAnnotationPresent(annotation)).toBeTruthy()
+      expect(person.getXClass().getInstanceProperty('name').isAnnotationPresent(annotation)).toBeTruthy()
     })
     it('Access the default value of annotation instance', function () {
       var annotation = _x.createAnnotation({
@@ -284,10 +295,10 @@ describe('Declare annotation', function () {
         }
       )
       var person = new Person()
-      expect(person.getXClass().getProperty('name').isAnnotationPresent(annotation)).toBeTruthy()
-      expect(person.getXClass().getProperty('name').getAnnotationInstance(annotation).name === 'superman').toBeTruthy()
-      expect(person.getXClass().getProperty('name').getAnnotationInstance(annotation).age === 19).toBeTruthy()
-      expect(person.getXClass().getProperty('name').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
+      expect(person.getXClass().getInstanceProperty('name').isAnnotationPresent(annotation)).toBeTruthy()
+      expect(person.getXClass().getInstanceProperty('name').getAnnotationInstance(annotation).name === 'superman').toBeTruthy()
+      expect(person.getXClass().getInstanceProperty('name').getAnnotationInstance(annotation).age === 19).toBeTruthy()
+      expect(person.getXClass().getInstanceProperty('name').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
     })
     it('Access the assigned value of annotation instance', function () {
       var annotation = _x.createAnnotation({
@@ -314,10 +325,10 @@ describe('Declare annotation', function () {
         }
       )
       var person = new Person()
-      expect(person.getXClass().getProperty('name').isAnnotationPresent(annotation)).toBeTruthy()
-      expect(person.getXClass().getProperty('name').getAnnotationInstance(annotation).name === 'xman').toBeTruthy()
-      expect(person.getXClass().getProperty('name').getAnnotationInstance(annotation).age === 20).toBeTruthy()
-      expect(person.getXClass().getProperty('name').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
+      expect(person.getXClass().getInstanceProperty('name').isAnnotationPresent(annotation)).toBeTruthy()
+      expect(person.getXClass().getInstanceProperty('name').getAnnotationInstance(annotation).name === 'xman').toBeTruthy()
+      expect(person.getXClass().getInstanceProperty('name').getAnnotationInstance(annotation).age === 20).toBeTruthy()
+      expect(person.getXClass().getInstanceProperty('name').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
     })
   })
   describe('Use annotation on the class static properties', function () {
@@ -325,18 +336,15 @@ describe('Declare annotation', function () {
       var annotation = _x.createAnnotation()
       var Person = _x.createCls(
         {
-          staticMethods: [
+          staticProps: [
             {
-              name: 'speak',
-              annotations: [annotation.valueOf()],
-              method: function () {
-                spyBox.methodA()
-              }
+              name: 'name',
+              annotations: [annotation.valueOf()]
             }
           ]
         }
       )
-      expect(Person.class.getMethod('speak').isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person.class.getStaticProperty('name').isAnnotationPresent(annotation)).toBeTruthy()
     })
     it('Access the default value of annotation instance', function () {
       var annotation = _x.createAnnotation({
@@ -348,21 +356,18 @@ describe('Declare annotation', function () {
       })
       var Person = _x.createCls(
         {
-          methods: [
+          staticProps: [
             {
-              name: 'speak',
-              annotations: [annotation.valueOf()],
-              method: function () {
-                spyBox.methodA()
-              }
+              name: 'name',
+              annotations: [annotation.valueOf()]
             }
           ]
         }
       )
-      expect(Person.class.getMethod('speak').isAnnotationPresent(annotation)).toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).name === 'superman').toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).age === 19).toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
+      expect(Person.class.getStaticProperty('name').isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person.class.getStaticProperty('name').getAnnotationInstance(annotation).name === 'superman').toBeTruthy()
+      expect(Person.class.getStaticProperty('name').getAnnotationInstance(annotation).age === 19).toBeTruthy()
+      expect(Person.class.getStaticProperty('name').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
     })
     it('Access the assigned value of annotation instance', function () {
       var annotation = _x.createAnnotation({
@@ -374,27 +379,50 @@ describe('Declare annotation', function () {
       })
       var Person = _x.createCls(
         {
-          methods: [
+          staticProps: [
             {
-              name: 'speak',
+              name: 'name',
               annotations: [annotation.valueOf(
                 {
                   name: 'xman',
                   age: 20,
                   isGood: false
                 })
-              ],
-              method: function () {
-                spyBox.methodA()
-              }
+              ]
             }
           ]
         }
       )
-      expect(Person.class.getMethod('speak').isAnnotationPresent(annotation)).toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).name === 'xman').toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).age === 20).toBeTruthy()
-      expect(Person.class.getMethod('speak').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
+      expect(Person.class.getStaticProperty('name').isAnnotationPresent(annotation)).toBeTruthy()
+      expect(Person.class.getStaticProperty('name').getAnnotationInstance(annotation).name === 'xman').toBeTruthy()
+      expect(Person.class.getStaticProperty('name').getAnnotationInstance(annotation).age === 20).toBeTruthy()
+      expect(Person.class.getStaticProperty('name').getAnnotationInstance(annotation).isGood === false).toBeTruthy()
+    })
+  })
+  describe('Use annotation on the method parameter', function () {
+    it('Access the declared annotation through the meta data', function () {
+      var annotation = _x.createAnnotation()
+      var Person = _x.createCls(
+        {
+          methods: [
+            {
+              name: 'speak',
+              method: function (msg) {
+              },
+              params: [
+                {
+                  type: 'string',
+                  annotations: [
+                    annotation.valueOf()
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      )
+      var person = new Person()
+      expect(person.getXClass().getInstanceMethod('speak', 'hello').getParams()[0].isAnnotationPresent(annotation)).toBeTruthy()
     })
   })
 })
