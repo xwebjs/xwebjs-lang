@@ -16,7 +16,8 @@
     "_x": true,
     "Q": true,
     "axios": true,
-    "_": true
+    "_": true,
+    "Dexie": true
   },
   "plugins": [
     "lodash"

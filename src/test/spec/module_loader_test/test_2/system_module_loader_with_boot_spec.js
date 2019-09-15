@@ -5,39 +5,42 @@ describe('System module loader', function () {
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
   it('Load vm boot modules from web server', function (done) {
-    // @Given
-    var vm = _x.getRootVM()
-    vm.setConfiguration({
-      vmInfo: {
-        loader: {
-          bootPath: '/test2/vm/boot',
-          extPath: '/test2/vm/ext'
-        },
-        bootModules: [
-          'Core', 'common.Collection'
-        ],
-        extModules: [
-          'Ext', 'common.MagicCollection'
-        ]
-      },
-      mainProgramInfo: {
-        loader: {
-          basePath: '/test2/program'
-        },
-        entryClassNames: 'MainProgram'
-      }
-    })
-    // @Then
-    vm.init().then(
-      function (mainAppClass) {
-        expect(mainAppClass.$.status === 'done').toBeTruthy()
-        expect(mainAppClass.getCollectionSize() === 100).toBeTruthy()
-        done()
-      },
-      function (errors) {
-        fail()
-        done()
-      }
-    )
+    _x.initVM().then(
+      function () {
+        // @Given
+        var vm = _x.getRootVM()
+        vm.setConfiguration({
+          vmInfo: {
+            loader: {
+              bootPath: '/test2/vm/boot',
+              extPath: '/test2/vm/ext'
+            },
+            bootModules: [
+              'Core', 'common.Collection'
+            ],
+            extModules: [
+              'Ext', 'common.MagicCollection'
+            ]
+          },
+          mainProgramInfo: {
+            loader: {
+              basePath: '/test2/program'
+            },
+            entryClassNames: 'MainProgram'
+          }
+        })
+        // @Then
+        vm.init().then(
+          function (mainAppClass) {
+            expect(mainAppClass.$.status === 'done').toBeTruthy()
+            expect(mainAppClass.getCollectionSize() === 100).toBeTruthy()
+            done()
+          },
+          function (errors) {
+            fail()
+            done()
+          }
+        )
+      })
   })
 })

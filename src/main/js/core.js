@@ -6,7 +6,7 @@
     var metaExtractFunction
     var classMetaExtractionRule, ifMetaExtractionRule, structureExtractionRule
     var XObject, XFace, XStructure
-    var commonUtil, methodUtil, annotationUtil
+    var commonUtil, methodUtil, annotationUtil, logger
     var withAnnotationCapabilities
     var exportedUtil = {}
     var dependencyChecker
@@ -211,9 +211,27 @@
           }
         }
       }
+      var prepareLogger = function () {
+        logger = {
+          debug: function (content) {
+            console.debug(content)
+          },
+          info: function (content) {
+            console.info(content)
+          },
+          warn: function (error) {
+            console.warn(error)
+          },
+          error: function (error) {
+            console.error(error)
+          }
+        }
+      }
       var initExportedUtil = function () {
         exportedUtil.dependencyChecker = dependencyChecker
-        _.assign(exportedUtil, commonUtil, methodUtil)
+        _.assign(exportedUtil, commonUtil, methodUtil,
+          { logger: logger }
+        )
       }
       var initRoot = function () {
         if (_.isUndefined(gRoot._x)) {
@@ -736,6 +754,7 @@
       }
 
       checkDependency()
+      prepareLogger()
       prepareRuntimeManager()
 
       initRoot()

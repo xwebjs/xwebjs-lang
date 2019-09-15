@@ -1,3 +1,4 @@
 target/**
 libs/**
+example/**
 *.md

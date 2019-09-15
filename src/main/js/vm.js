@@ -5,15 +5,19 @@
       BOOT_MODULE: 'BOOT_MODULE',
       EXT_MODULE: 'EXT_MODULE'
     }
+    var APP_FILE_DB_VERSION = 1
+    var APP_FILE_DB_NAME = 'app_file_db'
+    var APP_FILE_STORE_NAME = 'app_file_store'
     var root = _x
     var XModule, XPackage, XModuleContext, XProgram, XVM
     var rootVM
     var WebResourceUtil
+    var vmDB
     var logger
     var dependencies = {
       'core': {
         checkFn: function () {
-          return _x && _x.features.isLangCore
+          return _x && _x.features.isLangCore && (window.indexedDB)
         }
       }
     }
@@ -21,23 +25,15 @@
     var moduleParsedModules = {}
 
     function prepareCommon () {
-      logger = {
-        debug: function (content) {
-          console.debug(content)
-        },
-        info: function (content) {
-          console.info(content)
-        },
-        warn: function (error) {
-          console.warn(error)
-        },
-        error: function (error) {
-          console.error(error)
-        }
-      }
+      logger = _x.util.logger
       WebResourceUtil = (function () {
-        function storeResource (packagePath, modulName, codes) {
-          //todo
+        function storeResource (url, codes) {
+          vmDB.files.put(
+            {
+              filePath: url,
+              content: codes
+            }
+          )
         }
 
         return _x.createCls(
@@ -57,6 +53,7 @@
                   }
                 ).then(
                   function (response) {
+                    storeResource(url, response.data)
                     onSuccess(response.data)
                   },
                   function (errors) {
@@ -67,6 +64,19 @@
             }
           })
       })()
+    }
+
+    function enableVMDB () {
+      try {
+        vmDB = new Dexie('vmDb')
+        vmDB.version(1).stores(
+          {
+            files: '++id,filePath'
+          }
+        )
+      } catch (e) {
+        logger.error('failed to setup the VM DB because:' + e.getMessage())
+      }
     }
 
     function enableModule () {
@@ -451,6 +461,20 @@
 
       /**
        * @summary
+       * Save the the remote content to DB
+       *
+       * @private
+       * @static
+       * @memberOf XModuleContext
+       * @param fullPath
+       * @param content
+       */
+      function saveFileToLocalDB (fullPath, content) {
+
+      }
+
+      /**
+       * @summary
        * Load module files remotely
        * depends on the URI and loader configuration, the module files can be loaded
        * through different way, which includes WS and HTTP protocal
@@ -529,6 +553,7 @@
 
         function onFileLoadCompleted (fullPath, fileContent) {
           loadedFilesContent[fullPath] = {}
+
           getModuleContentByRunningSourceCodes(fileContent).then(
             function (moduleContent) {
               processedSuccessFulFileNum++
@@ -1107,13 +1132,14 @@
       root.exportModule = XModule.exportModule
     }
 
-    function init () {
-      prepareCommon()
-      enableModule()
-      enableModuleContext()
-      enablePackage()
-      enableProgram()
-      enableVM()
+    function initVM () {
+      return Q.when(prepareCommon())
+      .then(enableVMDB)
+      .then(enableModule)
+      .then(enableModuleContext)
+      .then(enablePackage)
+      .then(enableProgram)
+      .then(enableVM)
     }
 
     function postProcess () {
@@ -1126,9 +1152,14 @@
         'Dependency check failed because :\n' + checkResult.join('\n'))
     }
 
-    Q.when(init()).then(
-      postProcess
-    )
+    root.initVM = function () {
+      if (!root.features.isSystemEnabled) {
+        return Q.when(initVM())
+        .then(postProcess)
+      } else {
+        return Q()
+      }
+    }
   }
 
 )()
