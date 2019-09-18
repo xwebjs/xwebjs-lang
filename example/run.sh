@@ -13,20 +13,22 @@ echo "stop and remove the demo container"
 docker stop xwebjs-lang.${exampleName}-demo
 docker rm xwebjs-lang.${exampleName}-demo
 
+# copy key files
 if [ -d ./simple/js ]; then
    rm -r ./simple/js/lang
 fi
 cp -R ../src/main/js ./${exampleName}/js/lang
 
-# copy configuration files to example project
-cp -p common/config/* ./${exampleName}/config/
-echo "The copy operation is completed successfully"
+# copy libs
+if [ -d ./simple/libs ]; then
+   rm -r ./simple/libs
+fi
+cp -R ../libs ./${exampleName}/libs
 
 # run the container
 docker run \
 	-v "$(pwd)/${exampleName}":/usr/share/nginx/html \
 	--name xwebjs-lang.simple-demo \
-	-d -p 8001:80  nginx \
-	> cid
+	-d -p 8001:80  nginx
 
 echo "Demo ${exampleName} is ready at http://localhost:8001"

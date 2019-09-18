@@ -1,18 +1,20 @@
-const { series } = require('gulp');
+const { series } = require('gulp')
+var watch = require('glob-watcher')
+var fs = require('fs')
+var path = require('path')
 
-// The `clean` function is not exported so it can be considered a private task.
-// It can still be used within the `series()` composition.
-function clean(cb) {
-  // body omitted
-  cb();
+const watcher = watch(['../src/main/js/**/*.js', '../libs/**/*.js'])
+
+function autoSync () {
+  watcher.on('change', function (srcFilePath) {
+    console.log(srcFilePath + ' is changed')
+    var targetFileDest = path.normalize(
+      './simple/js/'
+      + srcFilePath.replace('../src/main/js/', 'lang/')
+    )
+    fs.createReadStream(srcFilePath)
+    .pipe(fs.createWriteStream(targetFileDest))
+  })
 }
 
-// The `build` function is exported so it is public and can be run with the `gulp` command.
-// It can also be used within the `series()` composition.
-function build(cb) {
-  // body omitted
-  cb();
-}
-
-exports.build = build;
-exports.default = series(clean, build);
+exports.autoSync = autoSync

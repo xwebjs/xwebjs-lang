@@ -1,3 +1,6 @@
+var Q
+var libURLContext = '../../libs/'
+
 function enableCache () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register(
@@ -17,24 +20,46 @@ function enableCache () {
   }
 }
 
+function enablePromise (cb) {
+  scriptUtil.load(
+    libURLContext + 'q.js',
+    function () {
+      cb()
+    }
+  )
+}
+
 var scriptUtil = {
-  loadError: function (oError) {
-    throw new URIError('The script ' + oError.target.src + ' didn\'t load correctly.')
-  },
-  affixScriptToHead: function (url, onloadFunction) {
+  load: function (url, onLoadedFunction, onError) {
     var newScript = document.createElement('script')
-    newScript.onerror = scriptUtil.loadError
-    if (onloadFunction) { newScript.onload = onloadFunction }
+    newScript.onerror = onError
+    if (onLoadedFunction) { newScript.onload = onLoadedFunction }
     document.head.appendChild(newScript)
     newScript.src = url
   }
 }
 
-function readConfigs () {
-}
-
 function loadDependentLibs (libs) {
-  return undefined
+  // eslint-disable-next-line lodash/prefer-lodash-method
+  var loadedLibNum = 0
+  // eslint-disable-next-line lodash/prefer-lodash-method
+  var deferred = Q.defer()
+  var onFailure = function (err) {
+    console.log('Failed to load lib:' + libs[loadedLibNum] + ' because:' + err)
+  }
+  var onLoaded = function (lib) {
+    console.log('Library ' + libs[loadedLibNum] + ' is loaded')
+    if (loadedLibNum === libs.length - 1) {
+      deferred.resolve()
+    } else {
+      scriptUtil.load(
+        '../../libs/' + libs[loadedLibNum] + '.js', onLoaded, onFailure
+      )
+      loadedLibNum++
+    }
+  }
+  onLoaded(libs[loadedLibNum])
+  return deferred.promise
 }
 
 function loadEntryModule (entryModules) {
@@ -43,20 +68,24 @@ function loadEntryModule (entryModules) {
 
 // eslint-disable-next-line no-unused-vars
 function init () {
-  enableCache()
-  readConfigs().then(
-    function (settings) {
-      return loadDependentLibs(settings.libs)
-    },
-    function (reason) {
-      alert('Failed to load dependent libraries')
-    },
-    function (progress) {
-      console.log('progress:' + progress)
-    }
-  ).then(
-    function (settings) {
-      return loadEntryModule(settings.entryModules)
+  // enableCache()
+  enablePromise(
+    function () {
+      // eslint-disable-next-line no-undef
+      loadDependentLibs(XConfig.libs).then(
+        function (reason) {
+          alert('Failed to load dependent libraries')
+        },
+        function (progress) {
+          console.log('progress:' + progress)
+        }
+      ).then(
+        function (settings) {
+          return loadEntryModule(settings.entryModules)
+        }
+      )
     }
   )
 }
+
+window.onload = init
