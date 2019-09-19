@@ -11,7 +11,8 @@ module.exports = function (config) {
         projectFiles.files.coreSourceFiles,
         projectFiles.files.testSourceBaseFilesPath,
         [
-          projectFiles.corePath.testSource + '/spec/core/*_spec.js'
+          projectFiles.corePath.testSource + '/spec/core/*_spec.js',
+          projectFiles.corePath.testSource + '/spec/module/*_spec.js'
         ]
       ),
     proxies: {

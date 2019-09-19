@@ -18,8 +18,7 @@ var projectFiles = {
   ],
   coreSourceFiles: [
     corePath.targetJs + '/core.js',
-    corePath.targetJs + '/vm.js',
-    corePath.targetJs + '/boot.js'
+    corePath.targetJs + '/vm.js'
   ],
   testSourceBaseFilesPath: [
     corePath.testSource + '/spec/common_helper.js'

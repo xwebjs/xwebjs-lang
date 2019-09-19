@@ -1,7 +1,11 @@
 describe('Support module context', function () {
   var nsCtx
   beforeEach(function () {
-    nsCtx = _x.createModuleContext()
+    return _x.initVM().then(
+      function () {
+        nsCtx = _x.createModuleContext()
+      }
+    )
   })
   describe('declare module without attaching the module into the package', function () {
     it('Throw exception if not containing the valid class or interface', function () {
