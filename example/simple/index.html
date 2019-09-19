@@ -5,5 +5,32 @@
     <script src="config/xConfig.js" type="text/javascript"></script>
     <script src="js/lang/boot.js" type="text/javascript"></script>
 </head>
-<body></body>
+<body>
+<script type="text/javascript">
+  var Robot
+  mainFn = function () {
+    console.log('Main function is called')
+    Robot = _x.createCls(
+      {
+        construct: function (name) {
+          this.id = _x.util.getRandomString(10)
+          this.name = name
+          console.log('Robot instance with name ' + name + ' is created')
+        },
+        properties: {
+          id: undefined,
+          name: undefined
+        },
+        methods: {
+          speak: function (words) {
+            console.log('Robot[' + this.name + ']:' + words)
+          }
+        }
+      }
+    )
+    var robotA = new Robot('A')
+    robotA.speak('Hello')
+  }
+</script>
+</body>
 </html>

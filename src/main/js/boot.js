@@ -1,5 +1,7 @@
-var Q
+var Q, XConfig
 var libURLContext = '../../libs/'
+var featureURLContext = '../js/lang/'
+var mainFn
 
 function enableCache () {
   if ('serviceWorker' in navigator) {
@@ -39,7 +41,7 @@ var scriptUtil = {
   }
 }
 
-function loadDependentLibs (libs) {
+function loadDependentLibs (contextPath, libs) {
   // eslint-disable-next-line lodash/prefer-lodash-method
   var loadedLibNum = 0
   // eslint-disable-next-line lodash/prefer-lodash-method
@@ -53,17 +55,30 @@ function loadDependentLibs (libs) {
       deferred.resolve()
     } else {
       scriptUtil.load(
-        '../../libs/' + libs[loadedLibNum] + '.js', onLoaded, onFailure
+        contextPath + libs[loadedLibNum] + '.js', onLoaded, onFailure
       )
       loadedLibNum++
     }
   }
-  onLoaded(libs[loadedLibNum])
+  scriptUtil.load(contextPath + libs[loadedLibNum] + '.js', onLoaded, onFailure)
   return deferred.promise
 }
 
+function loadFeatures (features) {
+  return loadDependentLibs(featureURLContext, features)
+}
+
 function loadEntryModule (entryModules) {
-  return undefined
+  return Q()
+}
+
+function invokeMainFn () {
+  // eslint-disable-next-line no-undef
+  if (!_.isFunction(mainFn)) {
+    console.log('The implementation of entry main function is not defined')
+    return 0
+  }
+  mainFn()
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -71,17 +86,22 @@ function init () {
   // enableCache()
   enablePromise(
     function () {
-      // eslint-disable-next-line no-undef
-      loadDependentLibs(XConfig.libs).then(
-        function (reason) {
-          alert('Failed to load dependent libraries')
-        },
-        function (progress) {
-          console.log('progress:' + progress)
+      loadDependentLibs(libURLContext, XConfig.libs)
+      .then(
+        function () {
+          return loadFeatures(XConfig.features)
         }
       ).then(
-        function (settings) {
-          return loadEntryModule(settings.entryModules)
+        function () {
+          return loadEntryModule(XConfig.entryModules)
+        }
+      ).then(
+        function () {
+          invokeMainFn()
+        }
+      ).catch(
+        function (error) {
+          console.log('Failed to start the program because:' + error)
         }
       )
     }
