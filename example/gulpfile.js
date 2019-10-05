@@ -1,20 +1,46 @@
-const { series } = require('gulp')
-var watch = require('glob-watcher')
-var fs = require('fs')
-var path = require('path')
+const { gulp, src, dest, parallel, series } = require('gulp')
+const watch = require('glob-watcher')
+const fs = require('fs')
 
-const watcher = watch(['../src/main/js/**/*.js', '../libs/**/*.js'])
+var examples = ['simple']
 
-function autoSync () {
-  watcher.on('change', function (srcFilePath) {
-    console.log(srcFilePath + ' is changed')
-    var targetFileDest = path.normalize(
-      './simple/js/'
-      + srcFilePath.replace('../src/main/js/', 'lang/')
+function syncLibs () {
+
+  console.log('Sync libs file for example')
+  let pipeLine = src('../target/js/libs/*')
+
+  for (const example of examples) {
+    pipeLine.pipe(
+      dest('./' + example + '/libs')
     )
-    fs.createReadStream(srcFilePath)
-    .pipe(fs.createWriteStream(targetFileDest))
-  })
+  }
+
+  return pipeLine
 }
 
-exports.autoSync = autoSync
+function syncBoot () {
+
+  let pipeLine = src(
+    ['../target/js/boot.js', '../target/js/cache/**'],
+    {
+      base: '../target/js/'
+    }
+  )
+
+  for (const example of examples) {
+    pipeLine.pipe(
+      dest('./' + example + '')
+    )
+  }
+
+  return pipeLine
+}
+
+function watchFiles () {
+  console.log('Watching the file change:' + examples.toString())
+  watcher(['../target/js/boot.js', '../target/js/cache/**'], syncBoot)
+  watcher('../target/js/libs/*', syncLibs)
+}
+
+exports.sync = parallel(syncBoot, syncLibs)
+exports.watch = watchFiles

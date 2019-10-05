@@ -1,29 +1,31 @@
-const { series } = require('gulp')
-var watch = require('glob-watcher')
+const { src, dest, parallel } = require('gulp')
+const concat = require('gulp-concat')
+const watcher = require('glob-watcher')
 
-var watcher = watch(['./src/*.js', './libs/*.js'])
+const needsSourceMap = false
 
-// Listen for the 'change' event to get `path`/`stat`
-// No async completion available because this is the raw chokidar instance
-watcher.on('change', function (path) {
-  console.log(path + ' is changed')
-})
-
-// Listen for other events
-// No async completion available because this is the raw chokidar instance
-watcher.on('add', function (path) {
-  console.log(path + ' is added')
-})
-
-function prepareResources (cb) {
-  cb()
+function watchFiles () {
+  watcher('./src/main/js/core/*', packCore)
+  watcher('./src/main/js/boot/**', packBoot)
+  watcher('./libs/*', packLibs)
 }
 
-// The `clean` function is not exported so it can be considered a private task.
-// It can still be used within the `series()` composition.
-function clean (cb) {
-  // body omitted
-  cb()
+function packLibs () {
+  return src('libs/*.js', { sourcemaps: needsSourceMap })
+  .pipe(dest('target/js/libs', { sourcemaps: needsSourceMap }))
+}
+
+function packBoot () {
+  console.log('Package boot file')
+  return src('src/main/js/boot/**', { sourcemaps: needsSourceMap })
+  .pipe(dest('target/js', { sourcemaps: needsSourceMap }))
+}
+
+function packCore () {
+  console.log('Package core js files')
+  return src('src/main/js/core/*.js', { sourcemaps: needsSourceMap })
+  .pipe(concat('xwebjs.js'))
+  .pipe(dest('target/js/libs', { sourcemaps: needsSourceMap }))
 }
 
 // The `build` function is exported so it is public and can be run with the `gulp` command.
@@ -33,7 +35,13 @@ function build (cb) {
   cb()
 }
 
-exports.build = build
-exports.default = series(
-  prepareResources, clean, build
+exports.watch = watchFiles
+exports.packLibs = packLibs
+exports.packCore = packCore
+exports.packBoot = packBoot
+
+exports.package = parallel(
+  packBoot, packCore, packLibs
 )
+
+exports.build = build

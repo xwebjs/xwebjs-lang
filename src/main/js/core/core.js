@@ -12,9 +12,12 @@
     var dependencyChecker
     var runningModel
     var __runtime
-    var vType = ['string', 'number', 'boolean', 'object', 'class',
-      'function', 'structure', 'array', 'any']
-
+    var vType = [
+      'string', 'number', 'boolean',
+      'object', 'class',
+      'function', 'structure', 'array',
+      'any'
+    ]
     var RUNNING_MODE = {
       DEBUG: 'DEBUG',
       PROD: 'PROD',

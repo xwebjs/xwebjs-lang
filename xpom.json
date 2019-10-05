@@ -1,5 +1,11 @@
 {
   "groupId": "com.xwebjs",
   "packageId": "xwebjs-lang",
-  "version": "1.0-SNAPSHOT"
+  "version": "1.0-SNAPSHOT",
+  "package": {
+    "includes": [
+      "core",
+      "vm"
+    ]
+  }
 }

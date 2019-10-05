@@ -1,2 +1,3 @@
-simple/js/lang
-libs
+simple/libs
+FileCacheSupport.js
+boot.js

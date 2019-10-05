@@ -3,6 +3,7 @@ var libURLContext = '../../libs/'
 var featureURLContext = '../js/lang/'
 var mainFn
 
+// enable cache
 function enableCache () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register(

@@ -1,3 +1,4 @@
+// File cache
 self.addEventListener(
   'install',
   function (e) {
