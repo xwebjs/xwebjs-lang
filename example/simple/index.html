@@ -23,7 +23,7 @@
         },
         methods: {
           speak: function (words) {
-            console.log('Robot[' + this.name + ']:' + words)
+            $('body').html('Robot[' + this.name + ']:' + words)
           }
         }
       }

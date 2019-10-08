@@ -11,19 +11,19 @@ module.exports = function (config) {
         projectFiles.files.coreSourceFiles,
         projectFiles.files.testSourceBaseFilesPath,
         [
-          projectFiles.corePath.testSource + '/spec/module_loader_test/**/*_spec.js',
+          projectFiles.corePath.testSource + '/spec/module_loader/**/*_spec.js',
           {
             pattern: projectFiles.corePath.testSource +
-              '/spec/module_loader_test/**/*.js',
+              '/spec/module_loader/**/*.js',
             included: false,
             nocache: true
           }
         ]
       ),
     proxies: {
-      '/test1/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader_test/test_1/program/',
-      '/test2/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader_test/test_2/program/',
-      '/test2/vm/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader_test/test_2/vm/'
+      '/test1/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/test_1/program/',
+      '/test2/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/test_2/program/',
+      '/test2/vm/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/test_2/vm/'
     }
   })
 }

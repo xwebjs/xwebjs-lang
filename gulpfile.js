@@ -1,6 +1,8 @@
 const { src, dest, parallel } = require('gulp')
 const concat = require('gulp-concat')
 const watcher = require('glob-watcher')
+const uglify = require('uglify-js')
+const through2 = require('through2')
 
 const needsSourceMap = false
 
@@ -24,7 +26,23 @@ function packBoot () {
 function packCore () {
   console.log('Package core js files')
   return src('src/main/js/core/*.js', { sourcemaps: needsSourceMap })
+  .pipe(through2.obj(function (file, _, cb) {
+    if (file.isBuffer()) {
+      const code = file.contents.toString() + ';'
+      file.contents = Buffer.from(code)
+    }
+    cb(null, file)
+  }))
   .pipe(concat('xwebjs.js'))
+  .pipe(through2.obj(function (file, _, cb) {
+    if (file.isBuffer()) {
+      const code = uglify.minify(
+        file.contents.toString()
+      )
+      file.contents = Buffer.from(code.code)
+    }
+    cb(null, file)
+  }))
   .pipe(dest('target/js/libs', { sourcemaps: needsSourceMap }))
 }
 

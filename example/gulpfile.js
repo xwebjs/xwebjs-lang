@@ -38,8 +38,8 @@ function syncBoot () {
 
 function watchFiles () {
   console.log('Watching the file change:' + examples.toString())
-  watcher(['../target/js/boot.js', '../target/js/cache/**'], syncBoot)
-  watcher('../target/js/libs/*', syncLibs)
+  watch(['../target/js/boot.js', '../target/js/cache/**'], syncBoot)
+  watch('../target/js/libs/*', syncLibs)
 }
 
 exports.sync = parallel(syncBoot, syncLibs)

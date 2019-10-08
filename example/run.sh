@@ -13,18 +13,6 @@ echo "stop and remove the demo container"
 docker stop xwebjs-lang.${exampleName}-demo
 docker rm xwebjs-lang.${exampleName}-demo
 
-# copy key files
-if [ -d ./simple/js ]; then
-   rm -r ./simple/js/lang
-fi
-cp -R ../src/main/js ./${exampleName}/js/lang
-
-# copy libs
-if [ -d ./simple/libs ]; then
-   rm -r ./simple/libs
-fi
-cp -R ../libs ./${exampleName}/libs
-
 # run the container
 docker run \
 	-v "$(pwd)/${exampleName}":/usr/share/nginx/html \

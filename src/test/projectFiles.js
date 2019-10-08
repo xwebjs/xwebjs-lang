@@ -17,8 +17,8 @@ var projectFiles = {
     corePath.targetLibs + '/dexie.js'
   ],
   coreSourceFiles: [
-    corePath.targetJs + '/core.js',
-    corePath.targetJs + '/vm.js'
+    corePath.targetJs + '/core/core.js',
+    corePath.targetJs + '/core/vm.js'
   ],
   testSourceBaseFilesPath: [
     corePath.testSource + '/spec/common_helper.js'

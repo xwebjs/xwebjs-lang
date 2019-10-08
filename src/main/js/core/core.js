@@ -1,5 +1,6 @@
 /* eslint-disable no-caller */
-(function () {
+(
+  function () {
     var root = {}
     var gRoot = this
     var configuration = {}
@@ -624,16 +625,19 @@
               if (_.isFunction(nodeRule.returnValue)) {
                 // while it is handling returning value
                 if (nodeRule.isMultiple && _.isArray(srcMetaForRule)) {
-                  nodeValue = _.map(srcMetaForRule, function (info) {
-                    return nodeRule.returnValue(info)
-                  })
+                  nodeValue = _.map(
+                    srcMetaForRule, function (info) {
+                      return nodeRule.returnValue(info)
+                    }
+                  )
                 } else if (nodeRule.isMultiple && _.isObject(srcMetaForRule)) {
                   nodeValue = [nodeRule.returnValue(srcMetaForRule)]
                 } else {
                   nodeValue = nodeRule.returnValue(
                     srcMetaForRule,
                     propertyNameOfReturnedValue,
-                    parentSrcMetaForRule)
+                    parentSrcMetaForRule
+                  )
                 }
               } else {
                 if (!_.isObject(nodeRule.childElements)) {
@@ -1549,6 +1553,4 @@
     setup()
     return prepareReturn()
   }
-
-  .call(this)
-)
+)()

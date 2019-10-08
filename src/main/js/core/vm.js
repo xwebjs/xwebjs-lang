@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars,spaced-comment */
-(function () {
+(
+  function () {
     var MODULE_TYPE = {
       PROGRAM_MODULE: 'PROGRAM_MODULE',
       BOOT_MODULE: 'BOOT_MODULE',
@@ -1161,5 +1162,4 @@
       }
     }
   }
-
 )()

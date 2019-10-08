@@ -1,7 +1,9 @@
 var Q, XConfig
 var libURLContext = '../../libs/'
-var featureURLContext = '../js/lang/'
 var mainFn
+var coreLibs = [
+  'lodash', 'axios', 'lodash', 'jquery-3.3.1', 'dexie', 'xwebjs'
+]
 
 // enable cache
 function enableCache () {
@@ -52,7 +54,7 @@ function loadDependentLibs (contextPath, libs) {
   }
   var onLoaded = function (lib) {
     console.log('Library ' + libs[loadedLibNum] + ' is loaded')
-    if (loadedLibNum === libs.length - 1) {
+    if (loadedLibNum === libs.length) {
       deferred.resolve()
     } else {
       scriptUtil.load(
@@ -63,10 +65,6 @@ function loadDependentLibs (contextPath, libs) {
   }
   scriptUtil.load(contextPath + libs[loadedLibNum] + '.js', onLoaded, onFailure)
   return deferred.promise
-}
-
-function loadFeatures (features) {
-  return loadDependentLibs(featureURLContext, features)
 }
 
 function loadEntryModule (entryModules) {
@@ -87,16 +85,8 @@ function init () {
   // enableCache()
   enablePromise(
     function () {
-      loadDependentLibs(libURLContext, XConfig.libs)
+      loadDependentLibs(libURLContext, coreLibs)
       .then(
-        function () {
-          return loadFeatures(XConfig.features)
-        }
-      ).then(
-        function () {
-          return loadEntryModule(XConfig.entryModules)
-        }
-      ).then(
         function () {
           invokeMainFn()
         }
