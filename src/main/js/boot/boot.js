@@ -1,9 +1,7 @@
-var Q, XConfig
-var libURLContext = '../../libs/'
-var mainFn
-var coreLibs = [
-  'lodash', 'axios', 'lodash', 'jquery-3.3.1', 'dexie', 'xwebjs'
-]
+var Q
+var libURLContext = './libs/'
+var main
+var coreLibs = ['xwebjs']
 
 // enable cache
 function enableCache () {
@@ -54,30 +52,26 @@ function loadDependentLibs (contextPath, libs) {
   }
   var onLoaded = function (lib) {
     console.log('Library ' + libs[loadedLibNum] + ' is loaded')
+    loadedLibNum++
     if (loadedLibNum === libs.length) {
       deferred.resolve()
     } else {
       scriptUtil.load(
         contextPath + libs[loadedLibNum] + '.js', onLoaded, onFailure
       )
-      loadedLibNum++
     }
   }
   scriptUtil.load(contextPath + libs[loadedLibNum] + '.js', onLoaded, onFailure)
   return deferred.promise
 }
 
-function loadEntryModule (entryModules) {
-  return Q()
-}
-
 function invokeMainFn () {
   // eslint-disable-next-line no-undef
-  if (!_.isFunction(mainFn)) {
+  if (!_.isFunction(main)) {
     console.log('The implementation of entry main function is not defined')
     return 0
   }
-  mainFn()
+  main()
 }
 
 // eslint-disable-next-line no-unused-vars

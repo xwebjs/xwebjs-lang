@@ -2,13 +2,14 @@
 <head>
     <meta charset="UTF-8"/>
     <title>Simple App</title>
-    <script src="config/xConfig.js" type="text/javascript"></script>
+    <script src="config/conf.js" type="text/javascript"></script>
     <script src="boot.js" type="text/javascript"></script>
 </head>
 <body>
 <script type="text/javascript">
   var Robot
-  mainFn = function () {
+
+  function main () {
     console.log('Main function is called')
     Robot = _x.createCls(
       {
@@ -23,7 +24,7 @@
         },
         methods: {
           speak: function (words) {
-            $('body').html('Robot[' + this.name + ']:' + words)
+            document.body.innerHTML = 'Robot[' + this.name + ']:' + words
           }
         }
       }

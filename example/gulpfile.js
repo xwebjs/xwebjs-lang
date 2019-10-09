@@ -1,39 +1,36 @@
 const { gulp, src, dest, parallel, series } = require('gulp')
 const watch = require('glob-watcher')
+
 const fs = require('fs')
 
-var examples = ['simple']
+var examples = ['simple', 'app_with_modules']
 
 function syncLibs () {
-
   console.log('Sync libs file for example')
   let pipeLine = src('../target/js/libs/*')
-
+  const root = pipeLine
   for (const example of examples) {
-    pipeLine.pipe(
+    pipeLine = pipeLine.pipe(
       dest('./' + example + '/libs')
     )
   }
-
-  return pipeLine
+  return root
 }
 
 function syncBoot () {
-
   let pipeLine = src(
     ['../target/js/boot.js', '../target/js/cache/**'],
     {
       base: '../target/js/'
     }
   )
-
+  let root = pipeLine
   for (const example of examples) {
-    pipeLine.pipe(
+    pipeLine = pipeLine.pipe(
       dest('./' + example + '')
     )
   }
-
-  return pipeLine
+  return root
 }
 
 function watchFiles () {

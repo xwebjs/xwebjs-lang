@@ -1,65 +1,56 @@
-const { src, dest, parallel } = require('gulp')
+const { src, dest, parallel, series } = require('gulp')
 const concat = require('gulp-concat')
 const watcher = require('glob-watcher')
-const uglify = require('uglify-js')
+const uglify = require('gulp-uglify')
+const del = require('del')
 const through2 = require('through2')
 
 const needsSourceMap = false
 
-function watchFiles () {
-  watcher('./src/main/js/core/*', packCore)
-  watcher('./src/main/js/boot/**', packBoot)
-  watcher('./libs/*', packLibs)
+function addSeparator (file, _, cb) {
+  if (file.isBuffer()) {
+    let fileContent = file.contents.toString()
+    fileContent = fileContent + ';'
+    file.contents = Buffer.from(fileContent)
+  }
+  cb(null, file)
 }
 
-function packLibs () {
-  return src('libs/*.js', { sourcemaps: needsSourceMap })
-  .pipe(dest('target/js/libs', { sourcemaps: needsSourceMap }))
+function watchFiles () {
+  watcher(['src/main/js/core/*.js', 'libs/*.js'], pack)
+  watcher('./src/main/js/boot/**', packBoot)
 }
 
 function packBoot () {
   console.log('Package boot file')
   return src('src/main/js/boot/**', { sourcemaps: needsSourceMap })
+  .pipe(uglify())
   .pipe(dest('target/js', { sourcemaps: needsSourceMap }))
 }
 
-function packCore () {
-  console.log('Package core js files')
-  return src('src/main/js/core/*.js', { sourcemaps: needsSourceMap })
-  .pipe(through2.obj(function (file, _, cb) {
-    if (file.isBuffer()) {
-      const code = file.contents.toString() + ';'
-      file.contents = Buffer.from(code)
-    }
-    cb(null, file)
-  }))
-  .pipe(concat('xwebjs.js'))
-  .pipe(through2.obj(function (file, _, cb) {
-    if (file.isBuffer()) {
-      const code = uglify.minify(
-        file.contents.toString()
-      )
-      file.contents = Buffer.from(code.code)
-    }
-    cb(null, file)
-  }))
+function copyPromise () {
+  console.log('Copy promise file')
+  return src('libs/q.js', { sourcemaps: needsSourceMap })
+  .pipe(uglify())
   .pipe(dest('target/js/libs', { sourcemaps: needsSourceMap }))
 }
 
-// The `build` function is exported so it is public and can be run with the `gulp` command.
-// It can also be used within the `series()` composition.
-function build (cb) {
-  // body omitted
-  cb()
+function pack () {
+  console.log('Package core js files')
+  return src(
+    ['libs/*.js', '!libs/q.js', 'src/main/js/core/*.js',],
+    { sourcemaps: needsSourceMap }
+  )
+  .pipe(through2.obj(addSeparator))
+  .pipe(concat('xwebjs.js'))
+  .pipe(uglify())
+  .pipe(dest('target/js/libs', { sourcemaps: needsSourceMap }))
+}
+
+function clean () {
+  return del(['./target/'])
 }
 
 exports.watch = watchFiles
-exports.packLibs = packLibs
-exports.packCore = packCore
-exports.packBoot = packBoot
+exports.package = series(clean, parallel(pack, packBoot, copyPromise))
 
-exports.package = parallel(
-  packBoot, packCore, packLibs
-)
-
-exports.build = build
