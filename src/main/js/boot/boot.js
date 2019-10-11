@@ -1,6 +1,6 @@
 var Q
 var libURLContext = './libs/'
-var main
+var main, Conf
 var coreLibs = ['xwebjs']
 
 // enable cache
@@ -66,12 +66,22 @@ function loadDependentLibs (contextPath, libs) {
 }
 
 function invokeMainFn () {
-  // eslint-disable-next-line no-undef
-  if (!_.isFunction(main)) {
-    console.log('The implementation of entry main function is not defined')
-    return 0
+  if (Conf.entryType === 'M') {
+    _x.initVM().then(
+      function () {
+        // @Given
+        var vm = _x.getRootVM()
+        vm.setConfiguration(_.clone(Conf))
+        vm.init()
+      }
+    )
+  } else {
+    if (_.isFunction(main)) {
+      main()
+    } else {
+      console.log('Main function or method is not defined')
+    }
   }
-  main()
 }
 
 // eslint-disable-next-line no-unused-vars

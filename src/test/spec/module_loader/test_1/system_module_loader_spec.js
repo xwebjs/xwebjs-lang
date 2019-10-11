@@ -19,7 +19,7 @@ describe('System module loader', function () {
             loader: {
               basePath: '/test1/program'
             },
-            entryClassNames: 'MainProgram'
+            entryClassName: 'MainProgram'
           }
         })
         // @Then

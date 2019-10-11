@@ -36,7 +36,6 @@
             }
           )
         }
-
         return _x.createCls(
           {
             staticMethods: {
@@ -1059,7 +1058,7 @@
      */
     function enableProgram () {
       function identifyProgramEntryClass () {
-        var entryClassNames = _x.util.asArray(this.configuration.entryClassNames)
+        var entryClassNames = _x.util.asArray(this.configuration.entryClassName)
         var firstModule
         if (entryClassNames.length > 0) {
           firstModule = this.getModule(
@@ -1084,7 +1083,7 @@
           props: {
             configuration: {
               basePath: null,
-              entryClassNames: ''
+              entryClassName: ''
             },
             mProgramClass: null,
             mProgramInstance: null,
@@ -1115,7 +1114,7 @@
             initProgramContext: function () {
               var me = this
               return me.loadModules(
-                _x.util.asArray(me.configuration.entryClassNames))
+                _x.util.asArray(me.configuration.entryClassName))
             },
             start: function () {
               return this.mProgramClass.main()

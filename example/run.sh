@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
 declare exampleName;
+declare port;
 
 exampleName=$1;
+port=$2;
 
 if [ ! -d ./${exampleName} ]; then
     echo "Example '${exampleName}' does not exist"
@@ -16,7 +18,7 @@ docker rm xwebjs-lang.${exampleName}-demo
 # run the container
 docker run \
 	-v "$(pwd)/${exampleName}":/usr/share/nginx/html \
-	--name xwebjs-lang.simple-demo \
-	-d -p 8001:80  nginx
+	--name xwebjs-lang.${exampleName}-demo \
+	-d -p ${port}:80  nginx
 
-echo "Demo ${exampleName} is ready at http://localhost:8001"
+echo "Demo ${exampleName} is ready at http://localhost:${port}"
