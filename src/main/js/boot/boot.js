@@ -69,7 +69,6 @@ function invokeMainFn () {
   if (Conf.entryType === 'M') {
     _x.initVM().then(
       function () {
-        // @Given
         var vm = _x.getRootVM()
         vm.setConfiguration(_.clone(Conf))
         vm.init()

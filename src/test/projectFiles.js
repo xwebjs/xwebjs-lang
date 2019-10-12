@@ -28,19 +28,4 @@ var projectFiles = {
 if (exports) {
   exports.files = projectFiles
   exports.corePath = corePath
-  exports.mergeFilesFor = function () {
-    var files = []
-    Array.prototype.slice.call(arguments, 0).forEach(function (filegroup) {
-      projectFiles[filegroup].forEach(function (file) {
-        // replace @ref
-        var match = file.match(/^@(.*)/)
-        if (match) {
-          files = files.concat(projectFiles[match[1]])
-        } else {
-          files.push(file)
-        }
-      })
-    })
-    return files
-  }
 }
