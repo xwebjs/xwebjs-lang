@@ -1,8 +1,10 @@
 _x.exportModule(
   {
-    imports: []
+    imports: [
+      'common.Collection'
+    ]
   },
-  function () {
+  function (Collection) {
     return _x.createCls(
       {
         props: {
@@ -10,6 +12,8 @@ _x.exportModule(
         },
         methods: {
           init: function () {
+            var collection = new Collection()
+            collection.size()
             this.status = 1
           }
         }

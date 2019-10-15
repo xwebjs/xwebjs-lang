@@ -16,7 +16,7 @@ describe('System module loader', function () {
               extPath: '/test2/vm/ext'
             },
             bootModules: [
-              'Core', 'common.Collection'
+              'Core'
             ],
             extModules: [
               'Ext', 'common.MagicCollection'

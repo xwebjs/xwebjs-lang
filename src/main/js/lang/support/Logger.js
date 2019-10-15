@@ -3,6 +3,6 @@ _x.exportModule(
     imports: []
   },
   function () {
-    return _.logger
+    return _x.util.logger
   }
 )

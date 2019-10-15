@@ -1,7 +1,6 @@
 _x.exportModule(
   {
-    imports: [
-    ]
+    imports: []
   },
   function () {
     return String
