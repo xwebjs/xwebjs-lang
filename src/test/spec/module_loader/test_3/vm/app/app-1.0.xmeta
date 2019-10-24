@@ -1,0 +1,1 @@
+{"modules":[{"pack":"a","module":"A"},{"pack":"b","module":"B"},{"pack":"b.c","module":"C"},{"pack":"b.c","module":"D"}],"moduleNum":4,"fileSize":792,"groupId":"test","artifactId":"app","version":"1.0"}
