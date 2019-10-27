@@ -87,6 +87,17 @@
           })
           return result
         }
+        commonUtil.generateUUID = function () {
+          var u = ''
+          var i = 0
+          while (i++ < 36) {
+            var c = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'[i - 1]
+            var r = Math.random() * 16 | 0
+            var v = c === 'x' ? r : (r & 0x3 | 0x8)
+            u += (c === '-' || c === '4') ? c : v.toString(16)
+          }
+          return u
+        }
         commonUtil.getValueType = function (value) {
           var type = _.lowerCase(typeof value)
           if (_.includes(['string', 'number', 'boolean'], type)) {

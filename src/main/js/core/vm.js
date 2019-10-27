@@ -6,14 +6,23 @@
       BOOT_MODULE: 'BOOT_MODULE',
       EXT_MODULE: 'EXT_MODULE'
     }
-    var APP_FILE_DB_VERSION = 1
-    var APP_FILE_DB_NAME = 'app_file_db'
-    var APP_FILE_STORE_NAME = 'app_file_store'
+    var LOADING_MODULE_TYPE = {
+      MODULE: 'MODULE',
+      LIB: 'LIB'
+    }
+    var MODULE_LOADING_STATUS = {
+      'NOT_STARTED': 0,
+      'LOADING_REMOTE_FILE': 1,
+      'PARSING_MODULE_CONTENT': 2,
+      'COMPLETED': 3,
+      'FAILED': 4
+    }
+
     var root = _x
     var XModule, XPackage, XModuleContext, XProgram, XVM
     var rootVM
-    var WebResourceUtil
-    var vmDB
+    var WebResourceUtil, DBUtil
+    var systemDB
     var logger
     var dependencies = {
       'core': {
@@ -27,55 +36,92 @@
 
     function prepareCommon () {
       logger = _x.util.logger
-      WebResourceUtil = (function () {
-        function storeResource (url, codes) {
-          vmDB.files.put(
+      DBUtil = {
+        localizeContextModuleCodes: function (contextId, modulePath, url) {
+          var defer = Q.defer()
+          WebResourceUtil.loadTextResource(
+            url,
+            function (codes) {
+              systemDB.moduleCodes.put(
+                {
+                  moduleId: _x.util.generateUUID(),
+                  contextId: contextId,
+                  modulePath: modulePath,
+                  content: codes
+                }
+              ).then(
+                function (info) {
+                  console.log(info)
+                  defer.resolve()
+                }
+              )
+            },
+            function (error) {
+              console.log(
+                'Failed to read remote module ' +
+                modulePath + 'from url' +
+                url + ' for context ' + contextId +
+                ' because :' + error
+              )
+              defer.reject()
+              throw new Error(error)
+            }
+          )
+          return defer.promise
+        },
+        getContextModuleCodes: function (contextId, modulePath) {
+          return systemDB.moduleCodes
+          .where('[contextId+modulePath]').equals([contextId, modulePath])
+          .toArray()
+        }
+      }
+      WebResourceUtil = {
+        loadTextResource: function (url, onSuccess, onFail, onProgress) {
+          logger.info('Load text resource from url:' + url)
+          axios.get(
+            url,
             {
-              filePath: url,
-              content: codes
+              onDownloadProgress: function (progressEvent) {
+                if (_.isFunction(onProgress)) {
+                  onProgress(progressEvent)
+                }
+              },
+              validateStatus: function (status) {
+                return status >= 200 && status < 300
+              }
+            }
+          ).then(
+            function (response) {
+              onSuccess(response.data)
+            },
+            function (errors) {
+              onFail(errors)
             }
           )
         }
-        return _x.createCls(
-          {
-            staticMethods: {
-              loadTextResource: function (url, onSuccess, onFail, onProgress) {
-                logger.info('Load text resource from url:' + url)
-                axios.get(
-                  url,
-                  {
-                    onDownloadProgress: function (progressEvent) {
-                      onProgress(progressEvent)
-                    },
-                    validateStatus: function (status) {
-                      return status >= 200 && status < 300
-                    }
-                  }
-                ).then(
-                  function (response) {
-                    storeResource(url, response.data)
-                    onSuccess(response.data)
-                  },
-                  function (errors) {
-                    onFail(errors)
-                  }
-                )
-              }
-            }
-          })
-      })()
+      }
     }
 
-    function enableVMDB () {
+    function enableDB () {
+      var defer = Q.defer()
       try {
-        vmDB = new Dexie('vmDb')
-        vmDB.version(1).stores(
+        systemDB = new Dexie('xwebjs_system')
+        systemDB.version(1).stores(
           {
-            files: '++id,filePath'
+            moduleCodes: 'moduleId,[contextId+modulePath]'
           }
         )
-      } catch (e) {
-        logger.error('failed to setup the VM DB because:' + e.getMessage())
+        systemDB.on(
+          'ready',
+          function () {
+            defer.resolve()
+          }
+        )
+        systemDB.open()
+        return defer.promise
+      } catch (error) {
+        logger.error('Failed to setup the system index DB because:' + error.oetMessage())
+        throw new Error(error)
       }
     }
 
@@ -151,7 +197,7 @@
           ],
           staticMethods: {
             /**
-             * @summary
+             * @description
              *
              * @memberOf XModule#
              * @public
@@ -276,7 +322,7 @@
 
     function enableModuleContext () {
       /**
-       * @summary
+       * @description
        * Manage the loading chain and
        * generate the promise for each module based on module path
        *
@@ -287,15 +333,22 @@
        *
        * @param modulePath
        */
-      function generateLoadingModulePromise (modulePath, moduleType) {
+      function generateLoadingModulePromise (modulePath) {
         var me = this
         var deferred = Q.defer()
         var loadingModuleInfo = {
-          status: 0,
-          rawContent: null,
-          moduleType: moduleType,
+          status: MODULE_LOADING_STATUS.NOT_STARTED,
+          rawContent: undefined,
+          moduleType: undefined,
           modulePath: modulePath,
-          promise: deferred.promise
+          promise: deferred.promise,
+          type: (function () {
+            if (_.includes(modulePath, ':')) {
+              return LOADING_MODULE_TYPE.LIB
+            } else {
+              return LOADING_MODULE_TYPE.MODULE
+            }
+          })()
         }
         me.loadingModules[modulePath] = loadingModuleInfo
         loadFile.call(me, loadingModuleInfo).then(
@@ -304,42 +357,62 @@
           }
         ).then(
           function (moduleContent) {
+            // the reason for passing the module content
+            // is for handling recursive importing scenario while the referring to the
+            // the dependent modules
             deferred.resolve(moduleContent)
           }
         ).catch(
           function (error) {
+            loadingModuleInfo.status = MODULE_LOADING_STATUS.FAILED
             deferred.reject(error)
             logger.error(
-              'Failed to generate loading module promise because: ' + error)
+              'Failed to generate loading module promise because:' + error)
           }
         )
-
         return deferred.promise
       }
 
+      /**
+       * @description
+       * Load single module file from local DB / Remote server
+       * it will firstly try to load the module codes from indexDB
+       * if not available, it calls localizeModuleResources method to
+       * localize the resource, once it is localized, it will return
+       * the codes back
+       *
+       * @memberOf XModuleContext
+       * @private
+       * @instance
+       * @method
+       *
+       * @param loadingModuleInfo
+       * @return {Promise} loadingModuleInfo
+       */
       function loadFile (loadingModuleInfo) {
         var me = this
         var moduleFilePaths = []
         moduleFilePaths.push(
           {
-            filePath: generateRemoteModuleFilePath.call(
+            filePath: generateRemoteFilePath.call(
               me,
               loadingModuleInfo.modulePath,
-              me.moduleType
+              me.moduleType,
+              loadingModuleInfo.type
             ),
             fullPath: loadingModuleInfo.modulePath
           }
         )
-        loadingModuleInfo.status = 1
+        loadingModuleInfo.status = MODULE_LOADING_STATUS.LOADING_REMOTE_FILE
         return loadModuleFiles.call(me, moduleFilePaths).then(
           function (modulesContent) {
             var loadedModuleRawContent = modulesContent[0]
             if (!loadedModuleRawContent.isSuccess) {
-              loadingModuleInfo.status = 5
+              loadingModuleInfo.status = MODULE_LOADING_STATUS.FAILED
               throw Error(
                 'Failed to load module:' + loadedModuleRawContent.modulePath)
             }
-            loadingModuleInfo.status = 2
+            loadingModuleInfo.status = MODULE_LOADING_STATUS.PARSING_MODULE_CONTENT
             loadingModuleInfo.rawContent = loadedModuleRawContent.content
             return loadingModuleInfo
           }
@@ -360,19 +433,19 @@
               loadingModuleInfo.modulePath,
               prepardModule
             )
-            loadingModuleInfo.status = 3
+            loadingModuleInfo.status = MODULE_LOADING_STATUS.COMPLETED
             delete me.loadingModules[loadingModuleInfo.modulePath]
             return prepardModule
           }
         ).catch(
           function (error) {
-            loadingModuleInfo.status = 4
+            loadingModuleInfo.status = MODULE_LOADING_STATUS.FAILED
             logger.error(
-              'Failed to prepare the module [' +
+              'Failed to parse the module content [' +
               loadingModuleInfo.modulePath +
               '] because ' + error)
             throw new Error(
-              'Fail to load the dependent module [' +
+              'Fail to pare the module module [' +
               loadingModuleInfo.modulePath +
               '] ')
           }
@@ -380,7 +453,7 @@
       }
 
       /**
-       * @summary
+       * @description
        * based on moduleContent, prepare the module
        *
        * @memberOf XModuleContext#
@@ -432,7 +505,7 @@
       }
 
       /**
-       * @summary
+       * @description
        * generate remote module path based on the module context configuration,
        * and the generated path is the URI which contains the protocol
        * at the beginning
@@ -442,8 +515,9 @@
        * @memberOf! XModuleContext
        * @returns {string} - file resource uri
        * @param modulePath
+       * @param moduleType
        */
-      function generateRemoteModuleFilePath (modulePath, moduleType) {
+      function generateRemoteFilePath (modulePath, moduleType, type) {
         var path = ''
         switch (moduleType) {
           case MODULE_TYPE.BOOT_MODULE:
@@ -456,31 +530,24 @@
             path = this.getConfigValue('loader.basePath')
             break
         }
-        return path + '/' + _.replace(modulePath, /\./g, '/') + '.js'
+        if (type === LOADING_MODULE_TYPE.MODULE) {
+          path = path + '/' + _.replace(modulePath, /\./g, '/') + '.js'
+        } else {
+          var pathInfo = _.split(modulePath, ':')
+          path = path + '/' + _.replace(pathInfo[0], /\./g, '/') + '-' + pathInfo[1] + '.xlib'
+        }
+        return path
       }
 
       /**
-       * @summary
-       * Save the the remote content to DB
-       *
-       * @private
-       * @static
-       * @memberOf XModuleContext
-       * @param fullPath
-       * @param content
-       */
-      function saveFileToLocalDB (fullPath, content) {
-
-      }
-
-      /**
-       * @summary
-       * Load module files remotely
+       * @description
+       * Load module files from local DB firstly if not available
+       * will try to load from remote the server
        * depends on the URI and loader configuration, the module files can be loaded
-       * through different way, which includes WS and HTTP protocal
+       * through different way, which includes WS and HTTP protocol
        *
        * @private
-       * @static
+       * @instance
        * @method
        * @memberOf! XModuleContext#
        * @returns {Promise} - promise with the list of loadedFileContent in array
@@ -490,6 +557,7 @@
        * @param modulesInfo
        */
       function loadModuleFiles (modulesInfo) {
+        var me = this
         var deferred = Q.defer()
         // key map structure, the key is used for storing the original sequence
         var loadedFilesContent = {}
@@ -547,7 +615,7 @@
               codes.slice(prefix.length)
             return fcodes
           } else {
-            throw Error('Invalide module content')
+            throw Error('Invalid module content')
           }
         }
 
@@ -619,18 +687,39 @@
           }
         }
 
+        function loadModuleResource (moduleInfo, onSuccess, onFail, onProgress) {
+          DBUtil.getContextModuleCodes(me.contextId, moduleInfo.fullPath).then(
+            function (moduleContents) {
+              if (moduleContents.length > 0) {
+                onSuccess(moduleInfo.path, moduleContents[0])
+              } else {
+                WebResourceUtil.loadTextResource(
+                  moduleInfo.path,
+                  onSuccess,
+                  onFail,
+                  onProgress
+                )
+              }
+            },
+            function (error) {
+              onFail(error)
+            }
+          )
+        }
+
         if (!_.isEmpty(modulesInfo)) {
           modulesInfo = _x.util.asArray(modulesInfo)
           _.forEach(modulesInfo,
             function (moduleInfo, index) {
               logger.debug(
-                'Load module info through file path:' + moduleInfo.filePath)
+                'Load module content through file path:' + moduleInfo.filePath
+              )
               loadedFilesContent[moduleInfo.fullPath] = {
                 order: index,
                 moduleInfo: null
               }
-              WebResourceUtil.loadTextResource(
-                moduleInfo.filePath,
+              loadModuleResource(
+                moduleInfo,
                 _.partial(onFileLoadCompleted, moduleInfo.fullPath),
                 _.partial(onFileLoadFail, moduleInfo.fullPath),
                 _.partial(onFileLoadProgress, moduleInfo.fullPath)
@@ -651,14 +740,15 @@
           construct: [
             function () {
               this.ctxPackage = XPackage.newInstance()
+              this.contextId = _x.util.generateUUID()
             },
             function (moduleType) {
-              this.moduleType = moduleType
               this._construct()
+              this.moduleType = moduleType
             },
             function (parentCtx, moduleType) {
-              this.parentContext = parentCtx
               this._construct(moduleType)
+              this.parentContext = parentCtx
             }
           ],
           props: {
@@ -666,8 +756,10 @@
               _xConfig: true,
               type: XPackage
             },
+            contextId: null,
             moduleType: null,
             parentContext: null,
+            // Used for storing the modules loading status
             loadingModules: {},
             contextConfiguration: {
               loader: {
@@ -684,12 +776,16 @@
              * @static
              * @method
              * @param context
-             * @param libFiles
+             * @param moduleFiles
              * @param moduleType
              * @returns PromiseLike<ModuleContext>
              */
-            loadContextModules: function (context, libFiles) {
-              return context.loadModules(libFiles)
+            loadContextModules: function (context, moduleFiles) {
+              return context.localizeModuleResources(moduleFiles).then(
+                function () {
+                  return context.loadModules(moduleFiles)
+                }
+              )
             },
             /**
              * @memberOf XModuleContext#
@@ -732,8 +828,31 @@
             getContextPackage: function () {
               return this.ctxPackage
             },
+            localizeModuleResources: function (mFiles) {
+              var me = this
+              var loadingPromises = []
+              _.forEach(mFiles,
+                function (moduleFilePath) {
+                  var mType
+                  var promise
+                  if (_.includes(moduleFilePath, ':')) {
+                    mType = LOADING_MODULE_TYPE.LIB
+                  } else {
+                    mType = LOADING_MODULE_TYPE.MODULE
+                  }
+                  promise = DBUtil.localizeContextModuleCodes(
+                    me.contextId, moduleFilePath,
+                    generateRemoteFilePath(
+                      moduleFilePath, me.moduleType, mType
+                    )
+                  )
+                  loadingPromises.push(promise)
+                }
+              )
+              return Q.all(loadingPromises)
+            },
             /**
-             * @summary
+             * @description
              * Load the modules from physical into context
              *
              * @memberOf XModuleContext#
@@ -763,31 +882,52 @@
               }
             ],
             /**
+             * @description
+             * Load modules from module or module lib file path
+             * it returns promise for notifying the next step in the chain
+             * when all modules have been fully loaded
+             *
              * @memberOf XModuleContext#
              * @public
              * @instance
              * @method
              * @param mFilePaths modules file path
              * @param moduleType
-             * @returns {*|PromiseLike<T | never>|Promise<T | never>}
+             * @returns {PromiseLike<T | never>|Promise<T | never>}
              */
             loadModules:
               [
                 function (mFilePaths) {
                   var me = this
+                  // Used for storing the all modules information which can be promise or actual module instance
+                  // this information will be returned as part of the pipeline
                   var loadingModules = []
                   _.forEach(mFilePaths,
                     function (modulePath, index) {
+                      // getting module loading status
                       var moduleLoading = me.loadingModules[modulePath]
+                      // try to get the module from the previously already loaded modules
                       var loadedModule = me.getModule(modulePath)
                       if (!_.isNull(loadedModule)) {
+                        // if the module has been loaded before, then just put into
+                        // loadingModules
                         loadingModules.push(loadedModule)
                       } else if (
                         moduleLoading &&
-                        (moduleLoading.status === 1 || moduleLoading.status === 2)
+                        (
+                          moduleLoading.status === MODULE_LOADING_STATUS.LOADING_REMOTE_FILE ||
+                          moduleLoading.status === MODULE_LOADING_STATUS.PARSING_MODULE_CONTENT ||
+                          moduleLoading.status === MODULE_LOADING_STATUS.COMPLETED ||
+                          moduleLoading.status === MODULE_LOADING_STATUS.FAILED
+                        )
                       ) {
+                        // if the requested modules which have been requested before
+                        // then put the previous requested loading status promise into loadingModules
                         loadingModules.push(moduleLoading.promise)
                       } else {
+                        // if the module was never requested before
+                        // then need to generate loading status request record
+                        // and put the generated loading status promise into loadingModules
                         loadingModules.push(
                           generateLoadingModulePromise.call(me, modulePath)
                         )
@@ -1016,17 +1156,21 @@
               return Q.when(loadDefaultConfiguration()).then(
                 function () {
                   bootModules = me.getConfigValue('bootModules')
-                  return XModuleContext.loadContextModules(
-                    bootContext, bootModules
-                  )
+                  if (!_.isUndefined(bootModules)) {
+                    return XModuleContext.loadContextModules(
+                      bootContext, bootModules
+                    )
+                  }
                 }
               ).then(
                 function () {
                   me.$.bootContext = bootContext
                   extModules = me.getConfigValue('extModules')
-                  return XModuleContext.loadContextModules(
-                    extContext, extModules
-                  )
+                  if (!_.isUndefined(extModules)) {
+                    return XModuleContext.loadContextModules(
+                      extContext, extModules
+                    )
+                  }
                 }
               ).then(
                 function () {
@@ -1134,7 +1278,7 @@
 
     function initVM () {
       return Q.when(prepareCommon())
-      .then(enableVMDB)
+      .then(enableDB)
       .then(enableModule)
       .then(enableModuleContext)
       .then(enablePackage)
