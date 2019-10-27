@@ -39,6 +39,7 @@
       DBUtil = {
         localizeContextModuleCodes: function (contextId, modulePath, url) {
           var defer = Q.defer()
+          logger.debug('Localizing the resource [' + modulePath + '@' + contextId + '] from remote URL ' + url)
           WebResourceUtil.loadTextResource(
             url,
             function (codes) {
@@ -50,9 +51,8 @@
                   content: codes
                 }
               ).then(
-                function (info) {
-                  console.log(info)
-                  defer.resolve()
+                function () {
+                  defer.resolve(codes)
                 }
               )
             },
@@ -445,7 +445,7 @@
               loadingModuleInfo.modulePath +
               '] because ' + error)
             throw new Error(
-              'Fail to pare the module module [' +
+              'Fail to parse the module module [' +
               loadingModuleInfo.modulePath +
               '] ')
           }
@@ -691,13 +691,19 @@
           DBUtil.getContextModuleCodes(me.contextId, moduleInfo.fullPath).then(
             function (moduleContents) {
               if (moduleContents.length > 0) {
-                onSuccess(moduleInfo.path, moduleContents[0])
+                onSuccess(moduleContents[0].content)
               } else {
-                WebResourceUtil.loadTextResource(
-                  moduleInfo.path,
-                  onSuccess,
-                  onFail,
-                  onProgress
+                // if the module is not localized before
+                // localize the resource and return codes
+                DBUtil.localizeContextModuleCodes(
+                  me.contextId, moduleInfo.fullPath, moduleInfo.filePath
+                ).then(
+                  function (codes) {
+                    onSuccess(codes)
+                  },
+                  function (error) {
+                    onFail(error)
+                  }
                 )
               }
             },
