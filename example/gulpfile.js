@@ -19,7 +19,7 @@ function syncLibs () {
 
 function syncBoot () {
   let pipeLine = src(
-    ['../target/js/boot.js', '../target/js/cache/**'],
+    ['../target/js/boot.js', '../target/js/CacheSupport.jsx`'],
     {
       base: '../target/js/'
     }

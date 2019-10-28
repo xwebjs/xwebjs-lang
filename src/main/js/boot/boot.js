@@ -7,9 +7,9 @@ var coreLibs = ['xwebjs']
 function enableCache () {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register(
-      'cache/FileCacheSupport.js',
+      'CacheSupport.js',
       {
-        scope: './'
+        scope: '/'
       }
     ).then(
       function (registration) {
@@ -17,7 +17,7 @@ function enableCache () {
       }
     ).catch(
       function (reason) {
-        console.log('Failed to register the file cache support:' + reason)
+        console.log('Failed to register the cache support:' + reason)
       }
     )
   }
@@ -85,7 +85,7 @@ function invokeMainFn () {
 
 // eslint-disable-next-line no-unused-vars
 function init () {
-  // enableCache()
+  enableCache()
   enablePromise(
     function () {
       loadDependentLibs(libURLContext, coreLibs)
