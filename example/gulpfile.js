@@ -1,9 +1,7 @@
 const { gulp, src, dest, parallel, series } = require('gulp')
 const watch = require('glob-watcher')
-
 const fs = require('fs')
-
-var examples = ['simple', 'app_with_modules']
+const examples = ['simple', 'app_with_modules']
 
 function syncLibs () {
   console.log('Sync libs file for example')
@@ -18,8 +16,9 @@ function syncLibs () {
 }
 
 function syncBoot () {
+  console.log('Sync target boot files')
   let pipeLine = src(
-    ['../target/js/boot.js', '../target/js/CacheSupport.jsx`'],
+    ['../target/js/boot.js', '../target/js/CacheSupport.js'],
     {
       base: '../target/js/'
     }
@@ -35,7 +34,7 @@ function syncBoot () {
 
 function watchFiles () {
   console.log('Watching the file change:' + examples.toString())
-  watch(['../target/js/boot.js', '../target/js/cache/**'], syncBoot)
+  watch(['../target/js/boot.js', '../target/js/CacheSupport.js'], syncBoot)
   watch('../target/js/libs/*', syncLibs)
 }
 

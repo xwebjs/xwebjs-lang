@@ -3,6 +3,10 @@ var libURLContext = './libs/'
 var main, Conf
 var coreLibs = ['xwebjs']
 
+navigator.serviceWorker.addEventListener('message', function (e) {
+    location.reload()
+})
+
 // enable cache
 function enableCache () {
   if ('serviceWorker' in navigator) {
@@ -90,6 +94,10 @@ function init () {
     function () {
       loadDependentLibs(libURLContext, coreLibs)
       .then(
+        function () {
+          return Q.delay(10000)
+        }
+      ).then(
         function () {
           invokeMainFn()
         }

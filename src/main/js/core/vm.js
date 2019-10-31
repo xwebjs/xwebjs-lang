@@ -568,18 +568,15 @@
         var processedFailedFileNum = 0
         var isReturned = false
 
-        function getModuleContentByRunningSourceCodes (codes) {
+        function getModuleContentByRunningSourceCodes (fullPath) {
           var bcodes
           var oScript
           var requestId = _x.util.getRandomString(10)
           var deferred = Q.defer()
           var checkerNum = 0
-          bcodes = validateAndPrepareModuleCodes(codes, requestId)
-          bcodes = window.btoa(bcodes)
           oScript = document.createElement('script')
           oScript.type = 'text/javascript'
-          oScript.src = 'data:application/x-javascript;charset=UTF-8;base64,' +
-            bcodes
+          oScript.src = '/xwebjs_module_' + fullPath + '_' + requestId + '_' + me.contextId
           var checker = setInterval(function () {
             if (moduleParsedModules[requestId]) {
               if (
@@ -606,23 +603,10 @@
           return deferred.promise
         }
 
-        function validateAndPrepareModuleCodes (codes, requestId) {
-          var prefix = '_x.exportModule('
-          var fcodes
-          if (codes.substr(0, prefix.length) === prefix) {
-            fcodes = prefix + '\'' +
-              requestId + '\',' +
-              codes.slice(prefix.length)
-            return fcodes
-          } else {
-            throw Error('Invalid module content')
-          }
-        }
-
         function onFileLoadCompleted (fullPath, fileContent) {
           loadedFilesContent[fullPath] = {}
 
-          getModuleContentByRunningSourceCodes(fileContent).then(
+          getModuleContentByRunningSourceCodes(fullPath).then(
             function (moduleContent) {
               processedSuccessFulFileNum++
               loadedFilesContent[fullPath].moduleInfo =

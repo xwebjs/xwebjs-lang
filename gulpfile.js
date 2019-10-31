@@ -28,10 +28,12 @@ function packBoot () {
   .pipe(dest('target/js', { sourcemaps: needsSourceMap }))
 }
 
-function copyPromise () {
-  console.log('Copy promise file')
-  return src('libs/q.js', { sourcemaps: needsSourceMap })
-  .pipe(uglify())
+function copySharedLibs () {
+  console.log('Copy shared libs files')
+  return src(
+    ['libs/q.js', 'libs/dexie.js'],
+    { sourcemaps: needsSourceMap }
+  ).pipe(uglify())
   .pipe(dest('target/js/libs', { sourcemaps: needsSourceMap }))
 }
 
@@ -52,5 +54,4 @@ function clean () {
 }
 
 exports.watch = watchFiles
-exports.package = series(clean, parallel(pack, packBoot, copyPromise))
-
+exports.package = series(clean, parallel(pack, packBoot, copySharedLibs))
