@@ -17,10 +17,17 @@ module.exports = function (config) {
               '/spec/module_loader/**/*.js',
             included: false,
             nocache: true
+          },
+          {
+            pattern: projectFiles.corePath.targetJs + 'boot/**.js',
+            included: false,
+            nocache: true
           }
         ]
       ),
     proxies: {
+      '/libs': '/base/libs/',
+      '/': '/base/src/main/js/boot/',
       '/test1/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/test_1/program/',
       '/test2/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/test_2/program/',
       '/test3/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/test_3/program/',

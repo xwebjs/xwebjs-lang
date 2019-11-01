@@ -10,7 +10,7 @@ navigator.serviceWorker.addEventListener('message', function (e) {
 // enable cache
 function enableCache () {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(
+    return navigator.serviceWorker.register(
       'CacheSupport.js',
       {
         scope: '/'
@@ -95,7 +95,7 @@ function init () {
       loadDependentLibs(libURLContext, coreLibs)
       .then(
         function () {
-          return Q.delay(10000)
+          return Q.delay(500)
         }
       ).then(
         function () {
