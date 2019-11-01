@@ -24,7 +24,6 @@ describe('System module loader', function () {
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
   it('Load vm boot modules from web server', function (done) {
-    enableCache()
     enableCache().then(
       function () {
         _x.initVM().then(
