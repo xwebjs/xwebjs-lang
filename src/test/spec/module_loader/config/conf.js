@@ -1,6 +1,7 @@
 var Conf = {
   core: {
-    libs: ['xwebjs']
+    libContextURL: './libs/',
+    libs: ['core,vm']
   },
   entryType: 'M',
   mainProgramInfo: {

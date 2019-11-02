@@ -17,7 +17,6 @@ describe('System module loader', function () {
       )
     }
   }
-
   beforeEach(function () {
     // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)

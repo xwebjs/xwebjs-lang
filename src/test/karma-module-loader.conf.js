@@ -26,8 +26,11 @@ module.exports = function (config) {
         ]
       ),
     proxies: {
-      '/libs': '/base/libs/',
       '/': '/base/src/main/js/boot/',
+      '/config/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/config/',
+      '/libs/': '/base/src/main/js/core/',
+      '/libs/q.js': '/base/libs/q.js',
+      '/libs/dexie.js': '/base/libs/dexie.js',
       '/test1/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/test_1/program/',
       '/test2/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/test_2/program/',
       '/test3/program/': '/base/' + projectFiles.corePath.testSource + '/spec/module_loader/test_3/program/',

@@ -11,8 +11,9 @@ if [ ! -d ./${exampleName} ]; then
     exit 1
 fi
 
-echo "stop and remove the demo container"
+echo "Stop the demo container xwebjs-lang.${exampleName}-demo"
 docker stop xwebjs-lang.${exampleName}-demo
+echo "Remove the demo container xwebjs-lang.${exampleName}-demo"
 docker rm xwebjs-lang.${exampleName}-demo
 
 # run the container

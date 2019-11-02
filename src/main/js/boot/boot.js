@@ -1,13 +1,10 @@
 var Q
-var libURLContext = './libs/'
-var main, Conf
-var coreLibs = ['xwebjs']
+var Conf
+var main
+var libURLContext =
+  Conf.core.libContextURL ? Conf.core.libContextURL : '/libs/'
+var coreLibs = Conf.core.libs
 
-navigator.serviceWorker.addEventListener('message', function (e) {
-    location.reload()
-})
-
-// enable cache
 function enableCache () {
   if ('serviceWorker' in navigator) {
     return navigator.serviceWorker.register(
@@ -89,21 +86,24 @@ function invokeMainFn () {
 
 // eslint-disable-next-line no-unused-vars
 function init () {
-  enableCache()
-  enablePromise(
+  enableCache().then(
     function () {
-      loadDependentLibs(libURLContext, coreLibs)
-      .then(
+      enablePromise(
         function () {
-          return Q.delay(500)
-        }
-      ).then(
-        function () {
-          invokeMainFn()
-        }
-      ).catch(
-        function (error) {
-          console.log('Failed to start the program because:' + error)
+          loadDependentLibs(libURLContext, coreLibs)
+          .then(
+            function () {
+              return Q.delay(500)
+            }
+          ).then(
+            function () {
+              invokeMainFn()
+            }
+          ).catch(
+            function (error) {
+              console.log('Failed to start the program because:' + error)
+            }
+          )
         }
       )
     }
