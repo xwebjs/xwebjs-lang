@@ -17,6 +17,7 @@ describe('System module loader', function () {
       )
     }
   }
+
   beforeEach(function () {
     // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
@@ -46,7 +47,8 @@ describe('System module loader', function () {
                 loader: {
                   basePath: '/test2/program'
                 },
-                entryClassName: 'MainProgram'
+                entryClassName: 'MainProgram',
+                programId: 'TestProgram'
               }
             })
             // @Then

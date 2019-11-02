@@ -730,7 +730,6 @@
           construct: [
             function () {
               this.ctxPackage = XPackage.newInstance()
-              this.contextId = _x.util.generateUUID()
             },
             function (moduleType) {
               this._construct()
@@ -750,14 +749,7 @@
             moduleType: null,
             parentContext: null,
             // Used for storing the modules loading status
-            loadingModules: {},
-            contextConfiguration: {
-              loader: {
-                basePath: '',
-                bootPath: '',
-                extPath: ''
-              }
-            }
+            loadingModules: {}
           },
           staticMethods: {
             /**
@@ -808,13 +800,32 @@
                 this.configuration,
                 config,
                 _.pick(
-                  config, _.keys(this.constructor)
+                  config, _.keys(this.configuration)
                 )
               )
             },
             getConfigValue: function (keyPath) {
               return _.property(_.split(keyPath, '.'))(this.configuration)
             },
+            init: function () {
+              this.initContextId()
+            },
+            initContextId: function () {
+              if (this.moduleType === MODULE_TYPE.BOOT_MODULE) {
+                this.contextId = 'BOOT-CONTEXT'
+              } else if (this.moduleType === MODULE_TYPE.EXT_MODULE) {
+                this.contextId = 'EXT-CONTEXT'
+              } else {
+                this.contextId = 'PROGRAM-CONTEXT-' + this.getContextIdSuffix()
+              }
+            },
+
+            // eslint-disable-next-line lodash/prefer-noop
+            /**
+             * Abstract method to be overwritten by sub class
+             */
+            // eslint-disable-next-line lodash/prefer-noop
+            getContextIdSuffix: function () {},
             getContextPackage: function () {
               return this.ctxPackage
             },
@@ -1089,6 +1100,7 @@
        */
       function startDefaultProgram () {
         var systemDefaultProgram = XProgram.newInstance(this.mainProgramConfiguration)
+        systemDefaultProgram.init()
         this.mainProgramInstance = systemDefaultProgram
         var mProgramClass
         if (!_.isNull(systemDefaultProgram)) {
@@ -1142,7 +1154,8 @@
 
               bootContext = XModuleContext.newInstance(MODULE_TYPE.BOOT_MODULE)
               extContext = XModuleContext.newInstance(bootContext, MODULE_TYPE.EXT_MODULE)
-
+              bootContext.init()
+              extContext.init()
               return Q.when(loadDefaultConfiguration()).then(
                 function () {
                   bootModules = me.getConfigValue('bootModules')
@@ -1217,7 +1230,8 @@
           props: {
             configuration: {
               basePath: null,
-              entryClassName: ''
+              entryClassName: '',
+              programId: null
             },
             mProgramClass: null,
             mProgramInstance: null,
@@ -1252,6 +1266,9 @@
             },
             start: function () {
               return this.mProgramClass.main()
+            },
+            getContextIdSuffix: function () {
+              return this.configuration.programId
             }
           }
         }

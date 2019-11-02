@@ -7,6 +7,7 @@ var Conf = {
     loader: {
       basePath: 'program'
     },
-    entryClassName: 'MainProgram'
+    entryClassName: 'MainProgram',
+    programId: 'example'
   }
 }
