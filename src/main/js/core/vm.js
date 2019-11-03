@@ -576,8 +576,9 @@
           var checkerNum = 0
           oScript = document.createElement('script')
           oScript.type = 'text/javascript'
-          oScript.src = '/xwebjs_module_' + fullPath + '_' + requestId + '_' + me.contextId
+          oScript.src = '/xwebjs_module/' + me.contextId + '/' + fullPath
           var checker = setInterval(function () {
+            var requestId = 'xwebjs.' + me.contextId + '.' + _.replace(fullPath, '/', '.')
             if (moduleParsedModules[requestId]) {
               if (
                 _.isObject(moduleParsedModules[requestId].metaInfo) &&

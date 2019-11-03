@@ -1,6 +1,7 @@
-importScripts('/libs/dexie.js', '/libs/q.js')
+importScripts('/libs/dexie.js', '/libs/q.js', '/config/conf.js')
 var CACHE_NAME = 'xwebjs_cache'
-var cachedFiles = [
+var Conf
+var cachedCoreFiles = [
   '/',
   '/index.html',
   '/boot.js',
@@ -11,6 +12,15 @@ var cachedFiles = [
 
 var systemDB
 var isDBEnabled = false
+var enableCoreFileCache = false
+
+if (Conf.cache && typeof Conf.cache.core === 'boolean') {
+  enableCorFileCache = Conf.cache.core
+}
+
+if (!enableCoreFileCache) {
+  cachedCoreFiles = []
+}
 
 function enableDB () {
   var defer = Q.defer()
@@ -45,7 +55,7 @@ self.addEventListener(
       caches.open(CACHE_NAME)
       .then(function (cache) {
         console.log('Opened cache, and caching files')
-        cache.addAll(cachedFiles)
+        cache.addAll(cachedCoreFiles)
       })
     )
   }
@@ -65,7 +75,7 @@ self.addEventListener('fetch', function (event) {
           return response
         } else {
           // eslint-disable-next-line lodash/prefer-includes
-          if (event.request.url.indexOf('xwebjs_module_') !== -1) {
+          if (event.request.url.indexOf('/xwebjs_module') !== -1) {
             console.log('Fetching module content from index DB:' + event.request.url)
             if (isDBEnabled) {
               return generateModuleFileCode(event.request)
@@ -95,11 +105,11 @@ function generateModuleFileCode (request) {
   var requestId
   var contextId
   var modulePath
-  var reg = /https?:\/\/[\w|.|\d|:]+\/xwebjs_module_(.+)_(.+)_(.+)/
+  var reg = /https?:\/\/[\w|.|\d|:]+\/xwebjs_module\/(.+)\/(.+)/
   var results = reg.exec(request.url)
-  modulePath = results[1]
-  requestId = results[2]
-  contextId = results[3]
+  contextId = results[1]
+  modulePath = results[2]
+  var requestId = 'xwebjs.' + contextId + '.' + modulePath.replace('/', '.')
   return getContextModuleCodes(contextId, modulePath).then(
     function (codes) {
       var prefix = '_x.exportModule('
@@ -116,7 +126,6 @@ function generateModuleFileCode (request) {
     },
     function () {
       console.warn('Logically, this case should not happen as module resource should have been cached in the indexDB for the first time loading')
-      // eslint-disable-next-line lodash/prefer-lodash-method
       request.url = modulePath.replace('.', '/')
       return fetch(request).then(function (response) {
         console.log('Response from network is:', response)

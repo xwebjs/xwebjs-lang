@@ -2,3 +2,4 @@ target/**
 libs/**
 example/**
 *.md
+**/boot/CacheSupport.js

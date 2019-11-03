@@ -3,5 +3,9 @@ var Conf = {
     libContextURL: './libs/',
     libs: ['core,vm']
   },
+  cache: {
+    core: false,
+    module: false
+  },
   entryType: 'M'
 }

@@ -17,8 +17,10 @@ function addSeparator (file, _, cb) {
 }
 
 function watchFiles () {
-  watcher(['src/main/js/core/*.js', 'libs/*.js'], pack)
-  watcher('src/main/js/boot/**', packBoot)
+  watcher(
+    ['src/main/js/boot/**', 'src/main/js/core/*.js', 'libs/*.js'],
+    series(clean, parallel(pack, packBoot, copySharedLibs))
+  )
 }
 
 function packBoot () {
