@@ -11,11 +11,10 @@ var cachedCoreFiles = [
 ]
 
 var systemDB
-var isDBEnabled = false
 var enableCoreFileCache = false
 
 if (Conf.cache && typeof Conf.cache.core === 'boolean') {
-  enableCorFileCache = Conf.cache.core
+  enableCoreFileCache = Conf.cache.core
 }
 
 if (!enableCoreFileCache) {
@@ -31,13 +30,6 @@ function enableDB () {
         moduleCodes: 'moduleId,[contextId+modulePath]'
       }
     )
-    systemDB.on(
-      'ready',
-      function () {
-        isDBEnabled = true
-        defer.resolve()
-      }
-    )
     systemDB.open()
     return defer.promise
   } catch (error) {
@@ -45,6 +37,7 @@ function enableDB () {
   }
 }
 
+enableDB()
 self.addEventListener(
   'install',
   function (event) {
@@ -68,6 +61,9 @@ self.addEventListener(
   }
 )
 self.addEventListener('fetch', function (event) {
+  if (event.request.cache === 'only-if-cached' && event.request.mode !== 'same-origin') {
+    return
+  }
   event.respondWith(
     caches.match(event.request).then(
       function (response) {
@@ -77,15 +73,7 @@ self.addEventListener('fetch', function (event) {
           // eslint-disable-next-line lodash/prefer-includes
           if (event.request.url.indexOf('/xwebjs_module') !== -1) {
             console.log('Fetching module content from index DB:' + event.request.url)
-            if (isDBEnabled) {
-              return generateModuleFileCode(event.request)
-            } else {
-              return enableDB().then(
-                function () {
-                  return generateModuleFileCode(event.request)
-                }
-              )
-            }
+            return generateModuleFileCode(event.request)
           } else {
             return fetch(event.request).then(function (response) {
               console.log('Response from network is:', response)
@@ -139,7 +127,17 @@ function generateModuleFileCode (request) {
 }
 
 function getContextModuleCodes (contextId, modulePath) {
-  return systemDB.moduleCodes
-  .where('[contextId+modulePath]').equals([contextId, modulePath])
-  .toArray()
+  return Q.promise(
+    function (resolve, reject, notify) {
+      systemDB.on(
+        'ready',
+        function () {
+          resolve(systemDB.moduleCodes
+          .where('[contextId+modulePath]').equals([contextId, modulePath])
+          .toArray())
+        }
+      )
+
+    }
+  )
 }

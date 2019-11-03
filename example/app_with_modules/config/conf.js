@@ -8,6 +8,6 @@ var Conf = {
       basePath: 'program'
     },
     entryClassName: 'MainProgram',
-    programId: 'example'
+    programId: 'example2'
   }
 }

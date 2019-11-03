@@ -813,11 +813,11 @@
             },
             initContextId: function () {
               if (this.moduleType === MODULE_TYPE.BOOT_MODULE) {
-                this.contextId = 'BOOT-CONTEXT'
+                this.contextId = 'boot-context'
               } else if (this.moduleType === MODULE_TYPE.EXT_MODULE) {
-                this.contextId = 'EXT-CONTEXT'
+                this.contextId = 'ext-context'
               } else {
-                this.contextId = 'PROGRAM-CONTEXT-' + this.getContextIdSuffix()
+                this.contextId = 'program-context-' + this.getContextIdSuffix()
               }
             },
 
