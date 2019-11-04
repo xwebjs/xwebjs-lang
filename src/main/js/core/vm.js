@@ -842,11 +842,20 @@
                   } else {
                     mType = LOADING_MODULE_TYPE.MODULE
                   }
-                  promise = DBUtil.localizeContextModuleCodes(
-                    me.contextId, moduleFilePath,
-                    generateRemoteFilePath(
-                      moduleFilePath, me.moduleType, mType
-                    )
+                  promise = DBUtil.getContextModuleCodes(me.contextId, moduleFilePath)
+                  .then(
+                    function (records) {
+                      if (records.length === 0) {
+                        return DBUtil.localizeContextModuleCodes(
+                          me.contextId, moduleFilePath,
+                          generateRemoteFilePath(
+                            moduleFilePath, me.moduleType, mType
+                          )
+                        )
+                      } else {
+                        return records[0].content
+                      }
+                    }
                   )
                   loadingPromises.push(promise)
                 }
