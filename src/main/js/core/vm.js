@@ -760,7 +760,6 @@
              * @method
              * @param context
              * @param moduleFiles
-             * @param moduleType
              * @returns PromiseLike<ModuleContext>
              */
             loadContextModules: function (context, moduleFiles) {

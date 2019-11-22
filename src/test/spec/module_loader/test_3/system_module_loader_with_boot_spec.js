@@ -4,7 +4,7 @@ describe('System module loader', function () {
     jasmine.addMatchers(objectMatcher)
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
-  xit('Load boot module library from web server', function (done) {
+  it('Load boot module library from web server', function (done) {
     _x.initVM().then(
       function () {
         // @Given
