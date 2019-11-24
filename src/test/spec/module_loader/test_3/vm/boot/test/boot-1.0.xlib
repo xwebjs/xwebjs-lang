@@ -1,5 +1,5 @@
 
-[=======================p#src.main/js;m#Core=======================]
+[=======================p#;m#Core=======================]
 _x.exportModule({imports:["common.Collection"]},function(t){return _x.createCls({props:{status:0},methods:{init:function(){(new t).size(),this.status=1}}})});
 [=======================p#common;m#Collection=======================]
 _x.exportModule({imports:[]},function(){return _x.createCls({methods:{size:function(){return 100}}})});

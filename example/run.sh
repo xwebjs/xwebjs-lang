@@ -6,6 +6,8 @@ declare port;
 exampleName=$1;
 port=$2;
 
+cd $(dirname $0)
+
 if [ ! -d ./${exampleName} ]; then
     echo "Example '${exampleName}' does not exist"
     exit 1

@@ -1,1 +1,1 @@
-{"modules":[{"pack":"src.main/js","module":"Ext"},{"pack":"common","module":"MagicCollection"}],"moduleNum":2,"fileSize":376,"groupId":"test","artifactId":"ext","version":"1.0"}
+{"modules":[{"pack":"","module":"Ext"},{"pack":"common","module":"MagicCollection"}],"moduleNum":2,"fileSize":365,"groupId":"test","artifactId":"ext","version":"1.0"}

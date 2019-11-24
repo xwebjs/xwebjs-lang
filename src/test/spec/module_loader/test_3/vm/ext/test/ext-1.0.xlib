@@ -1,5 +1,5 @@
 
-[=======================p#src.main/js;m#Ext=======================]
+[=======================p#;m#Ext=======================]
 _x.exportModule({imports:[]},function(){return _x.createCls({props:{status:0},methods:{init:function(){this.status=1}}})});
 [=======================p#common;m#MagicCollection=======================]
 _x.exportModule({imports:[]},function(){return _x.createCls({methods:{magicSize:function(){return 1e3}}})});

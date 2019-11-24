@@ -4,7 +4,7 @@ describe('System module loader', function () {
     jasmine.addMatchers(objectMatcher)
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
-  it('Load boot module library from web server', function (done) {
+  xit('Load boot module library from web server', function (done) {
     _x.initVM().then(
       function () {
         // @Given
@@ -12,8 +12,8 @@ describe('System module loader', function () {
         vm.setConfiguration({
           vmInfo: {
             loader: {
-              bootPath: '/test3/vm/boot',
-              extPath: '/test3/vm/ext'
+              bootLibPath: '/test3/vm/boot',
+              extLibPath: '/test3/vm/ext'
             },
             bootModules: [
               'test.boot:1.0'
@@ -24,12 +24,13 @@ describe('System module loader', function () {
           },
           mainProgramInfo: {
             loader: {
-              basePath: '/test3/program'
+              baseLibPath: '/test3/program'
             },
             appModules: [
               'test.app:1.0'
             ],
-            entryClassName: 'MainProgram'
+            entryClassName: 'MainProgram',
+            programId: 'TestProgram3'
           }
         })
         // @Then

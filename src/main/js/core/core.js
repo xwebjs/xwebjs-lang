@@ -321,9 +321,8 @@
           return returnFunction
         }
         var returnDefaultValue = function (
-          value,
-          propertyNameOfReturnedValue,
-          eachSrcMetaInfo) {
+          value
+        ) {
           if (_.isFunction(value)) {
             return undefined
           } else {
@@ -1470,7 +1469,7 @@
 
         function build (cleanMetaInfo) {
           _.forEach(cleanMetaInfo.props,
-            function (prop, index) {
+            function (prop) {
               metaProperties[prop.name] = prop
             }
           )
@@ -1478,7 +1477,7 @@
             properties = _.isEmpty(properties) ? {} : properties
             var me = this
             _.forEach(cleanMetaInfo.props,
-              function (prop, index) {
+              function (prop) {
                 Object.defineProperty(me, prop.name, {
                   enumerable: true,
                   configurable: false,
