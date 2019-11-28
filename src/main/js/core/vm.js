@@ -6,7 +6,7 @@
       BOOT_MODULE: 'BOOT_MODULE',
       EXT_MODULE: 'EXT_MODULE'
     }
-    var LOADING_FILE_TYPE = {
+    var FILE_TYPE = {
       MODULE: 'MODULE',
       LIB: 'LIB'
     }
@@ -375,11 +375,20 @@
        * @instance
        * @method
        *
-       * @param modulePath
+       * @param libInfo
        */
       function processLoadingLib (libInfo) {
         var me = this
         var deferred = Q.defer()
+        var loadingLibInfo = {
+          status: LIB_LOADING_STATUS.NOT_STARTED,
+          rawContent: undefined,
+          libModuleType: undefined,
+          libFullName: libInfo.fullPath,
+          promise: deferred.promise,
+          type: FILE_TYPE.MODULE
+        }
+        me.loadedLibs[libInfo.fullPath] = loadingLibInfo
         return deferred.promise
       }
 
@@ -395,7 +404,7 @@
        *
        * @param modulePath
        */
-      function generateLoadingModulePromise (modulePath) {
+      function processLoadingModule (modulePath) {
         var me = this
         var deferred = Q.defer()
         var loadingModuleInfo = {
@@ -403,24 +412,17 @@
           rawContent: undefined,
           moduleType: undefined,
           modulePath: modulePath,
-          promise: deferred.promise,
-          type: (function () {
-            if (_.includes(modulePath, ':')) {
-              return LOADING_FILE_TYPE.LIB
-            } else {
-              return LOADING_FILE_TYPE.MODULE
-            }
-          })()
+          promise: deferred.promise
         }
         me.loadingModules[modulePath] = loadingModuleInfo
-        loadFile.call(me, loadingModuleInfo).then(
+        loadFile.call(me, loadingModuleInfo, FILE_TYPE.MODULE).then(
           function (loadingModuleInfo) {
             return parseModuleContent.call(me, loadingModuleInfo)
           }
         ).then(
           function (moduleContent) {
             // the reason for passing the module content
-            // is for handling recursive importing scenario while the referring to the
+            // is for handling recursive importing scenario while referring to the
             // the dependent modules
             deferred.resolve(moduleContent)
           }
@@ -448,35 +450,42 @@
        * @instance
        * @method
        *
-       * @param loadingModuleInfo
+       * @param loadingFileInfo
+       * @param fileType FILE_TYPE
        * @return {Promise} loadingModuleInfo
        */
-      function loadFile (loadingModuleInfo) {
+      function loadFile (loadingFileInfo, fileType) {
         var me = this
-        var moduleFilePaths = []
-        moduleFilePaths.push(
+        var filesInfo = []
+        filesInfo.push(
           {
             filePath: generateRemoteFilePath.call(
               me,
-              loadingModuleInfo.modulePath,
+              loadingFileInfo.modulePath,
               me.moduleType,
-              loadingModuleInfo.type
+              fileType
             ),
-            fullPath: loadingModuleInfo.modulePath
+            fullPath: loadingFileInfo.modulePath,
+            fileType: fileType
           }
         )
-        loadingModuleInfo.status = MODULE_LOADING_STATUS.LOADING_REMOTE_FILE
-        return loadModuleFiles.call(me, moduleFilePaths).then(
+        loadingFileInfo.status = MODULE_LOADING_STATUS.LOADING_REMOTE_FILE
+        return loadAndGetFilesContent.call(me, filesInfo).then(
           function (modulesContent) {
-            var loadedModuleRawContent = modulesContent[0]
-            if (!loadedModuleRawContent.isSuccess) {
-              loadingModuleInfo.status = MODULE_LOADING_STATUS.FAILED
-              throw Error(
-                'Failed to load module:' + loadedModuleRawContent.modulePath)
+            var loadedFileRawContent = modulesContent[0]
+            if (!loadedFileRawContent.isSuccess) {
+              if (fileType === FILE_TYPE.MODULE) {
+                loadingFileInfo.status = MODULE_LOADING_STATUS.FAILED
+              } else {
+                loadingFileInfo.status = LIB_LOADING_STATUS.FAILED
+              }
+              throw new Error(
+                'Failed to load file:' + loadedFileRawContent.fullPath
+              )
             }
-            loadingModuleInfo.status = MODULE_LOADING_STATUS.PARSING_MODULE_CONTENT
-            loadingModuleInfo.rawContent = loadedModuleRawContent.content
-            return loadingModuleInfo
+            loadingFileInfo.status = MODULE_LOADING_STATUS.PARSING_MODULE_CONTENT
+            loadingFileInfo.rawContent = loadedFileRawContent.content
+            return loadingFileInfo
           }
         )
       }
@@ -578,34 +587,34 @@
        * @returns {string} - file resource uri
        * @param modulePath
        * @param moduleType MODULE_TYPE
-       * @param moduleLoadingType LOADING_FILE_TYPE
+       * @param moduleLoadingType FILE_TYPE
        */
       function generateRemoteFilePath (modulePath, moduleType, moduleLoadingType) {
         var path = ''
         switch (moduleType) {
           case MODULE_TYPE.BOOT_MODULE:
-            if (moduleLoadingType === LOADING_FILE_TYPE.MODULE) {
+            if (moduleLoadingType === FILE_TYPE.MODULE) {
               path = rootVM.getConfigValue('loader.bootPath')
             } else {
               path = rootVM.getConfigValue('loader.bootLibPath')
             }
             break
           case MODULE_TYPE.EXT_MODULE:
-            if (moduleLoadingType === LOADING_FILE_TYPE.MODULE) {
+            if (moduleLoadingType === FILE_TYPE.MODULE) {
               path = rootVM.getConfigValue('loader.extPath')
             } else {
               path = rootVM.getConfigValue('loader.extLibPath')
             }
             break
           case MODULE_TYPE.PROGRAM_MODULE:
-            if (moduleLoadingType === LOADING_FILE_TYPE.MODULE) {
+            if (moduleLoadingType === FILE_TYPE.MODULE) {
               path = this.getConfigValue('loader.basePath')
             } else {
               path = rootVM.getConfigValue('loader.baseLibPath')
             }
             break
         }
-        if (moduleLoadingType === LOADING_FILE_TYPE.MODULE) {
+        if (moduleLoadingType === FILE_TYPE.MODULE) {
           path = path + '/' + _.replace(modulePath, /\./g, '/') + '.js'
         } else {
           var pathInfo = _.split(modulePath, ':')
@@ -625,20 +634,25 @@
        * @instance
        * @method
        * @memberOf! XModuleContext#
+       * @param filesInfo
        * @returns {Promise} - promise with the list of loadedFileContent in array
-       * success or failure of promise :
-       * [{ filePath:, isSuccess:,content:, errors: }]
+       * @example
+       * {
+       *   modulePath: fullPath,
+       *   isSuccess: false,
+       *   errors: errorInfo
+       *   content : content
+       * }
        * progress of promise: TODO
-       * @param modulesInfo
        */
-      function loadModuleFiles (modulesInfo) {
+      function loadAndGetFilesContent (filesInfo) {
         var me = this
         var deferred = Q.defer()
-        // key map structure, the key is used for storing the original sequence
+        // key map structure, the key is full path, and value is object with order and moduleInfo
         var loadedFilesContent = {}
         // returned data for the caller
         var returnedFilesData = []
-        // proceedFileCount
+        // processedFileCount
         var processedSuccessFulFileNum = 0
         var processedFailedFileNum = 0
         var isReturned = false
@@ -682,7 +696,7 @@
           getModuleContentByRunningSourceCodes(fullPath).then(
             function (moduleContent) {
               processedSuccessFulFileNum++
-              loadedFilesContent[fullPath].moduleInfo =
+              loadedFilesContent[fullPath].loadedFileInfo =
                 {
                   modulePath: fullPath,
                   isSuccess: true,
@@ -691,9 +705,9 @@
             },
             function (errorInfo) {
               processedFailedFileNum++
-              loadedFilesContent[fullPath].moduleInfo =
+              loadedFilesContent[fullPath].loadedFileInfo =
                 {
-                  modulePath: fullPath,
+                  fullPath: fullPath,
                   isSuccess: false,
                   errors: errorInfo
                 }
@@ -708,9 +722,9 @@
         function onFileLoadFail (fullPath, errorInfo) {
           loadedFilesContent[fullPath] = {}
           processedFailedFileNum++
-          loadedFilesContent[fullPath].moduleInfo =
+          loadedFilesContent[fullPath].loadedFileInfo =
             {
-              modulePath: fullPath,
+              fullPath: fullPath,
               isSuccess: false,
               errors: errorInfo
             }
@@ -724,16 +738,17 @@
         function prepareReturnData () {
           var infos = _.values(loadedFilesContent)
           var sortedInfos = _.sortBy(infos, 'order')
-          returnedFilesData = _.union(returnedFilesData,
-            _.map(sortedInfos, 'moduleInfo')
+          returnedFilesData = _.union(
+            returnedFilesData,
+            _.map(sortedInfos, 'loadedFileInfo')
           )
         }
 
         function checkCompletion () {
           var processedFileNum = processedSuccessFulFileNum +
             processedFailedFileNum
-          deferred.notify(processedFileNum + 1 / modulesInfo.length + 1)
-          if (processedFileNum === modulesInfo.length && !isReturned) {
+          deferred.notify(processedFileNum + 1 / filesInfo.length + 1)
+          if (processedFileNum === filesInfo.length && !isReturned) {
             prepareReturnData()
             if (processedFailedFileNum === 0) {
               deferred.resolve(returnedFilesData)
@@ -770,22 +785,22 @@
           )
         }
 
-        if (!_.isEmpty(modulesInfo)) {
-          modulesInfo = _x.util.asArray(modulesInfo)
-          _.forEach(modulesInfo,
-            function (moduleInfo, index) {
+        if (!_.isEmpty(filesInfo)) {
+          filesInfo = _x.util.asArray(filesInfo)
+          _.forEach(filesInfo,
+            function (fileInfo, index) {
               logger.debug(
-                'Load module content through file path:' + moduleInfo.filePath
+                'Load module content through file path:' + fileInfo.filePath
               )
-              loadedFilesContent[moduleInfo.fullPath] = {
+              loadedFilesContent[fileInfo.fullPath] = {
                 order: index,
-                moduleInfo: null
+                loadedFileInfo: null
               }
               loadModuleResource(
-                moduleInfo,
-                _.partial(onFileLoadCompleted, moduleInfo.fullPath),
-                _.partial(onFileLoadFail, moduleInfo.fullPath),
-                _.partial(onFileLoadProgress, moduleInfo.fullPath)
+                fileInfo,
+                _.partial(onFileLoadCompleted, fileInfo.fullPath),
+                _.partial(onFileLoadFail, fileInfo.fullPath),
+                _.partial(onFileLoadProgress, fileInfo.fullPath)
               )
             }
           )
@@ -828,6 +843,25 @@
           },
           staticMethods: {
             /**
+             * @description
+             * load library modules into module registry
+             *
+             * @memberOf XModuleContext#
+             * @public
+             * @static
+             * @method
+             * @param context
+             * @param libFiles
+             * @returns PromiseLike<ModuleContext>
+             */
+            loadContextLibs: function (context, libFiles) {
+              return context.localizeLibResources(libFiles).then(
+                function () {
+                  return context.loadLibs(libFiles)
+                }
+              )
+            },
+            /**
              * @memberOf XModuleContext#
              * @public
              * @static
@@ -850,9 +884,9 @@
              * @method
              * @returns {Object} - path in details
              */
-            parseName: function (fullName) {
-              if (_.isString(fullName) && !_.isEmpty(fullName)) {
-                var paths = _.split(fullName, '.')
+            parseName: function (fullPath) {
+              if (_.isString(fullPath) && !_.isEmpty(fullPath)) {
+                var paths = _.split(fullPath, '.')
                 var moduleName
                 var packagePath = ''
                 moduleName = _.last(paths)
@@ -864,7 +898,7 @@
                   moduleName: moduleName
                 }
               } else {
-                throw Error('XModule path name "' + fullName + '" is invalid')
+                throw Error('XModule path name "' + fullPath + '" is invalid')
               }
             }
           },
@@ -901,20 +935,20 @@
             getContextPackage: function () {
               return this.ctxPackage
             },
-            localizeLibResources: function (mFiles) {
+            localizeLibResources: function (libFiles) {
               var me = this
               var loadingPromises = []
-              _.forEach(mFiles,
-                function (moduleFilePath) {
+              _.forEach(libFiles,
+                function (libFilePath) {
                   var promise
-                  promise = DBUtil.getContextModuleCodes(me.contextId, moduleFilePath)
+                  promise = DBUtil.getContextModuleCodes(me.contextId, libFilePath)
                   .then(
                     function (records) {
                       if (records.length === 0) {
-                        return DBUtil.localizeContextModuleCodes(
-                          me.contextId, moduleFilePath,
+                        return DBUtil.localizeContextLibCodes(
+                          me.contextId, libFilePath,
                           generateRemoteFilePath(
-                            moduleFilePath, me.moduleType, LOADING_FILE_TYPE.LIB
+                            libFilePath, me.moduleType, FILE_TYPE.LIB
                           )
                         )
                       } else {
@@ -940,7 +974,7 @@
                         return DBUtil.localizeContextModuleCodes(
                           me.contextId, moduleFilePath,
                           generateRemoteFilePath(
-                            moduleFilePath, me.moduleType, LOADING_FILE_TYPE.LIB
+                            moduleFilePath, me.moduleType, FILE_TYPE.MODULE
                           )
                         )
                       } else {
@@ -963,6 +997,11 @@
              * @instance
              * @method
              * @param libsInfo {Object}
+             * @example
+             * {
+             *   fullPath: "test.boot:1.0",
+             *   repoURL: null
+             * }
              * @returns {*|PromiseLike<T | never>|Promise<T | never>}
              */
             loadLibs: function (libsInfo) {
@@ -971,7 +1010,7 @@
               _.forEach(libsInfo,
                 function (libInfo) {
                   // getting library loading info
-                  var loadedLibInfo = me.loadedLibs[libInfo.fullName]
+                  var loadedLibInfo = me.loadedLibs[libInfo.fullPath]
                   if (!_.isNull(loadedLibInfo)) {
                     if (loadedLibInfo.status === LIB_LOADING_STATUS.COMPLETED) {
                       loadingLibs.push(loadedLibInfo)
@@ -979,7 +1018,7 @@
                       loadingLibs.push(loadedLibInfo.promise)
                     }
                   } else {
-                    loadedLibInfo.push()
+                    loadingLibs.push(processLoadingLib.call(me, libInfo))
                   }
                 }
               )
@@ -1064,7 +1103,7 @@
                         // then need to generate loading status request record
                         // and put the generated loading status promise into loadingModules
                         loadingModules.push(
-                          generateLoadingModulePromise.call(me, modulePath)
+                          processLoadingModule.call(me, modulePath)
                         )
                       }
                     }
@@ -1073,8 +1112,8 @@
                 }
               ],
             register: [
-              function (fullName, moduleContent) {
-                var pathInfo = XModuleContext.parseName(fullName)
+              function (fullPath, moduleContent) {
+                var pathInfo = XModuleContext.parseName(fullPath)
                 return this.register(pathInfo.packagePath, pathInfo.moduleName,
                   moduleContent)
               },
@@ -1130,8 +1169,8 @@
               return currentPackage
             },
             removeModule: [
-              function (fullName) {
-                var info = XModuleContext.parseName(fullName)
+              function (fullPath) {
+                var info = XModuleContext.parseName(fullPath)
                 return this.removeModule(info.packagePath, info.moduleName)
               },
               function (packagePath, moduleName) {
@@ -1148,11 +1187,11 @@
                * @public
                * @instance
                * @method
-               * @param fullName
+               * @param fullPath
                * @returns {XModule}
                */
-              function (fullName) {
-                var info = XModuleContext.parseName(fullName)
+              function (fullPath) {
+                var info = XModuleContext.parseName(fullPath)
                 return this.getModule(info.packagePath, info.moduleName)
               },
               /**
@@ -1180,8 +1219,8 @@
               }
             ],
             hasModule: [
-              function (fullName) {
-                var info = XModuleContext.parseName(fullName)
+              function (fullPath) {
+                var info = XModuleContext.parseName(fullPath)
                 return this.hasModule(info.packagePath, info.moduleName)
               },
               function (packagePath, moduleName) {
@@ -1311,7 +1350,7 @@
               ).catch(
                 function (errors) {
                   console.error(
-                    'Failed to initialize the rootVM, caused by:' + errors)
+                    'Failed to initialize the root VM, caused by:' + errors)
                   throw Error(errors)
                 }
               )

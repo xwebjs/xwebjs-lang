@@ -13,6 +13,11 @@ var cachedCoreFiles = [
 var systemDB
 var enableCoreFileCache = false
 
+const FIlE_TYPE = {
+  LIB: 'LIB',
+  MODULE: 'MODULE'
+}
+
 if (Conf.cache && typeof Conf.cache.core === 'boolean') {
   enableCoreFileCache = Conf.cache.core
 }
@@ -73,7 +78,10 @@ self.addEventListener('fetch', function (event) {
           // eslint-disable-next-line lodash/prefer-includes
           if (event.request.url.indexOf('/xwebjs_module') !== -1) {
             console.log('Fetching module content from index DB:' + event.request.url)
-            return generateModuleFileCode(event.request)
+            return generateFileCode(event.request, FIlE_TYPE.MODULE)
+          } else if (event.request.url.indexOf('/xwebjs_libs') !== -1) {
+            console.log('Fetching library content from index DB:' + event.request.url)
+            return generateFileCode(event.request, FIlE_TYPE.LIB)
           } else {
             return fetch(event.request).then(function (response) {
               console.log('Response from network is:', response)
@@ -89,32 +97,57 @@ self.addEventListener('fetch', function (event) {
   )
 })
 
-function generateModuleFileCode (request) {
+function generateFileCode (request, fileType) {
   var requestId
   var contextId
-  var modulePath
-  var reg = /https?:\/\/[\w|.|\d|:]+\/xwebjs_module\/(.+)\/(.+)/
-  var results = reg.exec(request.url)
+  var filePath
+  var reg
+  var results
+  var getFileFn
+  var parseFileFn
+
+  if (fileType === FIlE_TYPE.MODULE) {
+    reg = /https?:\/\/[\w|.|\d|:]+\/xwebjs_module\/(.+)\/(.+)/
+    getFileFn = getContextModuleCodes
+    parseFileFn = parseModuleFileContent
+  } else {
+    reg = /https?:\/\/[\w|.|\d|:]+\/xwebjs_lib\/(.+)\/(.+)/
+    getFileFn = getContextLibraryCodes
+    parseFileFn = parseLibFileContent
+  }
+  results = reg.exec(request.url)
   contextId = results[1]
-  modulePath = results[2]
-  var requestId = 'xwebjs.' + contextId + '.' + modulePath.replace('/', '.')
-  return getContextModuleCodes(contextId, modulePath).then(
-    function (codes) {
-      var prefix = '_x.exportModule('
-      var fcodes
-      codes = codes[0].content
-      if (codes.substr(0, prefix.length) === prefix) {
-        fcodes = prefix + '\'' +
-          requestId + '\',' +
-          codes.slice(prefix.length)
-        return new Response(fcodes)
-      } else {
-        throw Error('Invalid module content')
-      }
-    },
+  filePath = results[2]
+  requestId = 'xwebjs.' + contextId + '.' + filePath.replace('/', '.')
+
+  function parseModuleFileContent (codes) {
+    var prefix = '_x.exportModule('
+    var fCodes
+    codes = codes[0].content
+    if (codes.substr(0, prefix.length) === prefix) {
+      fCodes = prefix + '\'' + requestId + '\',' + codes.slice(prefix.length)
+      return new Response(fCodes)
+    } else {
+      throw new Error('Invalid module file content')
+    }
+  }
+  function parseLibFileContent (codes) {
+    var prefix = '_x.exportModule('
+    var fCodes
+    codes = codes[0].content
+    if (codes.substr(0, prefix.length) === prefix) {
+      fCodes = prefix + '\'' + requestId + '\',' + codes.slice(prefix.length)
+      return new Response(fCodes)
+    } else {
+      throw new Error('Invalid lib file content')
+    }
+  }
+
+  return getFileFn.call(this, contextId, filePath).then(
+    parseFileFn,
     function () {
-      console.warn('Logically, this case should not happen as module resource should have been cached in the indexDB for the first time loading')
-      request.url = modulePath.replace('.', '/')
+      console.warn('Logically, this case should not happen as supported module or library resource should have been cached in the indexDB for the first time loading')
+      request.url = filePath.replace('.', '/')
       return fetch(request).then(function (response) {
         console.log('Response from network is:', response)
         return response
@@ -125,6 +158,7 @@ function generateModuleFileCode (request) {
     }
   )
 }
+
 
 function getContextModuleCodes (contextId, modulePath) {
   return Q.promise(
@@ -137,7 +171,20 @@ function getContextModuleCodes (contextId, modulePath) {
           .toArray())
         }
       )
-
+    }
+  )
+}
+function getContextLibraryCodes (contextId, libPath) {
+  return Q.promise(
+    function (resolve, reject, notify) {
+      systemDB.on(
+        'ready',
+        function () {
+          resolve(systemDB.moduleCodes
+          .where('[contextId+libPath]').equals([contextId, libPath])
+          .toArray())
+        }
+      )
     }
   )
 }
