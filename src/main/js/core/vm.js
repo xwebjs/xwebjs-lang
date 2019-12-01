@@ -471,8 +471,8 @@
         )
         loadingFileInfo.status = MODULE_LOADING_STATUS.LOADING_REMOTE_FILE
         return loadAndGetFilesContent.call(me, filesInfo).then(
-          function (modulesContent) {
-            var loadedFileRawContent = modulesContent[0]
+          function (fileContents) {
+            var loadedFileRawContent = fileContents[0]
             if (!loadedFileRawContent.isSuccess) {
               if (fileType === FILE_TYPE.MODULE) {
                 loadingFileInfo.status = MODULE_LOADING_STATUS.FAILED
@@ -625,20 +625,31 @@
 
       /**
        * @description
-       * Load module files from local DB firstly if not available
-       * will try to load from remote the server
-       * depends on the URI and loader configuration, the module files can be loaded
-       * through different way, which includes WS and HTTP protocol
+       * Load module files from local DB and interpret file content
        *
        * @private
        * @instance
        * @method
        * @memberOf! XModuleContext#
-       * @param filesInfo
-       * @returns {Promise} - promise with the list of loadedFileContent in array
+       * @param filesInfo {Array.<Object>}
+       * @example
+       * [
+       *   {
+       *     fullPath: shape.Circle
+       *     fileType: FILE_TYPE.MODULE
+       *   }
+       * ]
+       * @example
+       * [
+       *   {
+       *     fullPath: boot:1.0
+       *     fileType: FILE_TYPE.MODULE
+       *   }
+       * ]
+       * @returns {Promise.<Array.<Object>>} - promise with the list of loadedFileContent in array
        * @example
        * {
-       *   modulePath: fullPath,
+       *   fullPath: fullPath,
        *   isSuccess: false,
        *   errors: errorInfo
        *   content : content
@@ -698,7 +709,7 @@
               processedSuccessFulFileNum++
               loadedFilesContent[fullPath].loadedFileInfo =
                 {
-                  modulePath: fullPath,
+                  fullPath: fullPath,
                   isSuccess: true,
                   content: moduleContent
                 }
@@ -759,24 +770,13 @@
           }
         }
 
-        function loadModuleResource (moduleInfo, onSuccess, onFail) {
-          DBUtil.getContextModuleCodes(me.contextId, moduleInfo.fullPath).then(
-            function (moduleContents) {
-              if (moduleContents.length > 0) {
-                onSuccess(moduleContents[0].content)
+        function loadModuleResource (fileInfo, onSuccess, onFail) {
+          DBUtil.getContextModuleCodes(me.contextId, fileInfo.fullPath).then(
+            function (fileContents) {
+              if (fileContents.length > 0) {
+                onSuccess(fileContents[0].content)
               } else {
-                // if the module is not localized before
-                // localize the resource and return codes
-                DBUtil.localizeContextModuleCodes(
-                  me.contextId, moduleInfo.fullPath, moduleInfo.filePath
-                ).then(
-                  function (codes) {
-                    onSuccess(codes)
-                  },
-                  function (error) {
-                    onFail(error)
-                  }
-                )
+                throw new Error('Resource ' + fileInfo.filePath + ' is expected to have been localized')
               }
             },
             function (error) {
@@ -790,7 +790,7 @@
           _.forEach(filesInfo,
             function (fileInfo, index) {
               logger.debug(
-                'Load module content through file path:' + fileInfo.filePath
+                'Load module content through file fullPath:' + fileInfo.fullPath
               )
               loadedFilesContent[fileInfo.fullPath] = {
                 order: index,
