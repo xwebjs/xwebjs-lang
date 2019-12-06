@@ -776,7 +776,16 @@
               if (fileContents.length > 0) {
                 onSuccess(fileContents[0].content)
               } else {
-                throw new Error('Resource ' + fileInfo.filePath + ' is expected to have been localized')
+                DBUtil.localizeContextModuleCodes(
+                  me.contextId, fileInfo.fullPath, fileInfo.filePath
+                ).then(
+                  function (codes) {
+                    onSuccess(codes)
+                  },
+                  function (error) {
+                    onFail(error)
+                  }
+                )
               }
             },
             function (error) {
