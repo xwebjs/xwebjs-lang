@@ -389,6 +389,13 @@
           type: FILE_TYPE.MODULE
         }
         me.loadedLibs[libInfo.fullPath] = loadingLibInfo
+        /**
+         * todo
+         * step 1: load file
+         * step 2: split the file content and parse the module content
+         * step 2.1: split file and read each file as json
+         * step 2.1.1: call parseModuleContent method
+         */
         return deferred.promise
       }
 
@@ -452,7 +459,7 @@
        *
        * @param loadingFileInfo
        * @param fileType FILE_TYPE
-       * @return {Promise} loadingModuleInfo
+       * @return {Promise<Object>}
        */
       function loadFile (loadingFileInfo, fileType) {
         var me = this
@@ -469,7 +476,11 @@
             fileType: fileType
           }
         )
-        loadingFileInfo.status = MODULE_LOADING_STATUS.LOADING_REMOTE_FILE
+        if (fileType === FILE_TYPE.MODULE) {
+          loadingFileInfo.status = MODULE_LOADING_STATUS.LOADING_REMOTE_FILE
+        } else {
+          loadingFileInfo.status = LIB_LOADING_STATUS.LOADING_REMOTE_FILE
+        }
         return loadAndGetFilesContent.call(me, filesInfo).then(
           function (fileContents) {
             var loadedFileRawContent = fileContents[0]
@@ -704,6 +715,12 @@
 
         function onFileLoadCompleted (fullPath) {
           loadedFilesContent[fullPath] = {}
+          /**
+           * todo
+           * Needs to have the separate function for handling reading library
+           * file content, which should be returned in plain text instead of
+           * parsed json format
+           */
           getModuleContentByRunningSourceCodes(fullPath).then(
             function (moduleContent) {
               processedSuccessFulFileNum++
@@ -864,11 +881,7 @@
              * @returns PromiseLike<ModuleContext>
              */
             loadContextLibs: function (context, libFiles) {
-              return context.localizeLibResources(libFiles).then(
-                function () {
-                  return context.loadLibs(libFiles)
-                }
-              )
+              return context.loadLibs(libFiles)
             },
             /**
              * @memberOf XModuleContext#
@@ -880,11 +893,7 @@
              * @returns PromiseLike<ModuleContext>
              */
             loadContextModules: function (context, moduleFiles) {
-              return context.localizeModuleResources(moduleFiles).then(
-                function () {
-                  return context.loadModules(moduleFiles)
-                }
-              )
+              return context.loadModules(moduleFiles)
             },
             /**
              * @memberOf XModuleContext#
