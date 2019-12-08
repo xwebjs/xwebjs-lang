@@ -393,9 +393,13 @@
          * todo
          * step 1: load file
          * step 2: split the file content and parse the module content
-         * step 2.1: split file and read each file as json
+         * step 2.1: split file and read each file module as json
          * step 2.1.1: call parseModuleContent method
          */
+        loadFile.call(me, loadingLibInfo, FILE_TYPE.LIB).then(
+          function (loadingLibInfo) {
+            console.log(loadingLibInfo)
+          })
         return deferred.promise
       }
 
@@ -713,15 +717,22 @@
           return deferred.promise
         }
 
-        function onFileLoadCompleted (fullPath) {
+        function getLibContent (fullPath, fileContent) {
+          return Q.Promise(function (resolve) {
+            resolve(fileContent)
+          })
+        }
+
+        function onFileLoadCompleted (fileInfo, fileContent) {
+          var fullPath = fileInfo.fullPath
+          var getContentFn
           loadedFilesContent[fullPath] = {}
-          /**
-           * todo
-           * Needs to have the separate function for handling reading library
-           * file content, which should be returned in plain text instead of
-           * parsed json format
-           */
-          getModuleContentByRunningSourceCodes(fullPath).then(
+          if (fileInfo.fileType === FILE_TYPE.MODULE) {
+            getContentFn = getModuleContentByRunningSourceCodes
+          } else {
+            getContentFn = getLibContent
+          }
+          getContentFn.call(this, fullPath).then(
             function (moduleContent) {
               processedSuccessFulFileNum++
               loadedFilesContent[fullPath].loadedFileInfo =
@@ -747,7 +758,8 @@
           )
         }
 
-        function onFileLoadFail (fullPath, errorInfo) {
+        function onFileLoadFail (fileInfo, errorInfo) {
+          var fullPath = fileInfo.fullPath
           loadedFilesContent[fullPath] = {}
           processedFailedFileNum++
           loadedFilesContent[fullPath].loadedFileInfo =
@@ -781,19 +793,28 @@
             if (processedFailedFileNum === 0) {
               deferred.resolve(returnedFilesData)
             } else {
-              deferred.reject('Failed to load the module file')
+              deferred.reject('Failed to load and get file contents')
             }
             isReturned = true
           }
         }
 
-        function loadModuleResource (fileInfo, onSuccess, onFail) {
-          DBUtil.getContextModuleCodes(me.contextId, fileInfo.fullPath).then(
+        function loadFileResource (fileInfo, onSuccess, onFail) {
+          var getFn
+          var localizeFn
+          if (fileInfo.fileType === FILE_TYPE.MODULE) {
+            getFn = DBUtil.getContextModuleCodes
+            localizeFn = DBUtil.localizeContextModuleCodes
+          } else {
+            getFn = DBUtil.getContextLibCodes
+            localizeFn = DBUtil.localizeContextLibCodes
+          }
+          getFn.call(me, me.contextId, fileInfo.fullPath).then(
             function (fileContents) {
               if (fileContents.length > 0) {
                 onSuccess(fileContents[0].content)
               } else {
-                DBUtil.localizeContextModuleCodes(
+                localizeFn.call(me,
                   me.contextId, fileInfo.fullPath, fileInfo.filePath
                 ).then(
                   function (codes) {
@@ -815,6 +836,7 @@
           filesInfo = _x.util.asArray(filesInfo)
           _.forEach(filesInfo,
             function (fileInfo, index) {
+              var loadResourceFn
               logger.debug(
                 'Load module content through file fullPath:' + fileInfo.fullPath
               )
@@ -822,11 +844,11 @@
                 order: index,
                 loadedFileInfo: null
               }
-              loadModuleResource(
+              loadFileResource(
                 fileInfo,
-                _.partial(onFileLoadCompleted, fileInfo.fullPath),
-                _.partial(onFileLoadFail, fileInfo.fullPath),
-                _.partial(onFileLoadProgress, fileInfo.fullPath)
+                _.partial(onFileLoadCompleted, fileInfo),
+                _.partial(onFileLoadFail, fileInfo),
+                _.partial(onFileLoadProgress, fileInfo)
               )
             }
           )
