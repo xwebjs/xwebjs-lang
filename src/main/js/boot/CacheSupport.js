@@ -13,7 +13,7 @@ var cachedCoreFiles = [
 var systemDB
 var enableCoreFileCache = false
 
-const FIlE_TYPE = {
+var FIlE_TYPE = {
   LIB: 'LIB',
   MODULE: 'MODULE'
 }

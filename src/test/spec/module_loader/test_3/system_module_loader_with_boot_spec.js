@@ -15,6 +15,12 @@ describe('System module loader', function () {
               bootLibPath: '/test3/vm/boot',
               extLibPath: '/test3/vm/ext'
             },
+            bootModules: [
+              'Core'
+            ],
+            extModules: [
+              'Ext', 'common.MagicCollection'
+            ],
             bootLibs: [
               'test.boot:1.0'
             ],

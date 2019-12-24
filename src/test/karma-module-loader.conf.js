@@ -13,8 +13,12 @@ module.exports = function (config) {
         [
           projectFiles.corePath.testSource + '/spec/module_loader/**/*_spec.js',
           {
-            pattern: projectFiles.corePath.testSource +
-              '/spec/module_loader/**/*.js',
+            pattern: projectFiles.corePath.testSource + '/spec/module_loader/**/*.js',
+            included: false,
+            nocache: true
+          },
+          {
+            pattern: projectFiles.corePath.testSource + '/spec/module_loader/**/*.xlib',
             included: false,
             nocache: true
           },

@@ -383,23 +383,24 @@
         var loadingLibInfo = {
           status: LIB_LOADING_STATUS.NOT_STARTED,
           rawContent: undefined,
-          libModuleType: undefined,
-          libFullName: libInfo.fullPath,
+          fullPath: libInfo,
           promise: deferred.promise,
-          type: FILE_TYPE.MODULE
+          type: FILE_TYPE.LIB
         }
         me.loadedLibs[libInfo.fullPath] = loadingLibInfo
         /**
          * todo
-         * step 1: load file
-         * step 2: split the file content and parse the module content
-         * step 2.1: split file and read each file module as json
-         * step 2.1.1: call parseModuleContent method
+         * step 1: load file & get file content
+         * step 2: call parseModuleContent method
          */
         loadFile.call(me, loadingLibInfo, FILE_TYPE.LIB).then(
           function (loadingLibInfo) {
             console.log(loadingLibInfo)
-          })
+            // todo
+            // add module registration step
+            deferred.resolve()
+          }
+        )
         return deferred.promise
       }
 
@@ -421,8 +422,7 @@
         var loadingModuleInfo = {
           status: MODULE_LOADING_STATUS.NOT_STARTED,
           rawContent: undefined,
-          moduleType: undefined,
-          modulePath: modulePath,
+          fullPath: modulePath,
           promise: deferred.promise
         }
         me.loadingModules[modulePath] = loadingModuleInfo
@@ -472,11 +472,11 @@
           {
             filePath: generateRemoteFilePath.call(
               me,
-              loadingFileInfo.modulePath,
+              loadingFileInfo.fullPath,
               me.moduleType,
               fileType
             ),
-            fullPath: loadingFileInfo.modulePath,
+            fullPath: loadingFileInfo.fullPath,
             fileType: fileType
           }
         )
@@ -498,7 +498,12 @@
                 'Failed to load file:' + loadedFileRawContent.fullPath
               )
             }
-            loadingFileInfo.status = MODULE_LOADING_STATUS.PARSING_MODULE_CONTENT
+
+            if (fileType === FILE_TYPE.MODULE) {
+              loadingFileInfo.status = MODULE_LOADING_STATUS.PARSING_MODULE_CONTENT
+            } else {
+              loadingFileInfo.status = LIB_LOADING_STATUS.LOADING_MODULE_CONTENT
+            }
             loadingFileInfo.rawContent = loadedFileRawContent.content
             return loadingFileInfo
           }
@@ -516,11 +521,11 @@
               preparedModuleContent
             )
             me.register(
-              loadingModuleInfo.modulePath,
+              loadingModuleInfo.fullPath,
               preparedModule
             )
             loadingModuleInfo.status = MODULE_LOADING_STATUS.COMPLETED
-            delete me.loadingModules[loadingModuleInfo.modulePath]
+            delete me.loadingModules[loadingModuleInfo.fullPath]
             return preparedModule
           }
         ).catch(
@@ -528,11 +533,11 @@
             loadingModuleInfo.status = MODULE_LOADING_STATUS.FAILED
             logger.error(
               'Failed to parse the module content [' +
-              loadingModuleInfo.modulePath +
+              loadingModuleInfo.fullPath +
               '] because ' + error)
             throw new Error(
               'Fail to parse the module module [' +
-              loadingModuleInfo.modulePath +
+              loadingModuleInfo.fullPath +
               '] ')
           }
         )
@@ -601,12 +606,12 @@
        * @memberOf! XModuleContext
        * @returns {string} - file resource uri
        * @param modulePath
-       * @param moduleType MODULE_TYPE
+       * @param contextType Context type
        * @param moduleLoadingType FILE_TYPE
        */
-      function generateRemoteFilePath (modulePath, moduleType, moduleLoadingType) {
+      function generateRemoteFilePath (modulePath, contextType, moduleLoadingType) {
         var path = ''
-        switch (moduleType) {
+        switch (contextType) {
           case MODULE_TYPE.BOOT_MODULE:
             if (moduleLoadingType === FILE_TYPE.MODULE) {
               path = rootVM.getConfigValue('loader.bootPath')
@@ -717,9 +722,50 @@
           return deferred.promise
         }
 
+        function getLibContentBySplittingSourceCodes (fileContent) {
+          var HEADER_PREFIX = '[======================='
+          var HEADER_SUFFIX = '=======================]'
+          var moduleContents = []
+          var moduleContent = {
+            metaInfo: null,
+            content: null
+          }
+          var sections = _.split(fileContent, HEADER_PREFIX)
+          _.forEach(sections,
+            function (section, index) {
+              if (_.includes(section, HEADER_SUFFIX)) {
+                var sectionInfo = _.split(section, HEADER_SUFFIX)
+                moduleContent.metaInfo = getSectionMetaInfo(sectionInfo[0])
+                moduleContent.content = sectionInfo[1]
+                moduleContents.push(moduleContent)
+              }
+            }
+          )
+          return moduleContents
+        }
+
+        function getSectionMetaInfo (sectionInfo
+        ) {
+          var pattern = /p#(.*);m#([\w]+)/
+          var info = pattern.exec(sectionInfo)
+          return {
+            package: info[1],
+            moduleName: info[2],
+            fullPath: (function () {
+              if (_.isEmpty(info[1])) {
+                return info[2]
+              } else {
+                return info[1] + '.' + info[2]
+              }
+            })()
+          }
+        }
+
         function getLibContent (fullPath, fileContent) {
           return Q.Promise(function (resolve) {
-            resolve(fileContent)
+            resolve(
+              getLibContentBySplittingSourceCodes(fileContent)
+            )
           })
         }
 
@@ -732,14 +778,14 @@
           } else {
             getContentFn = getLibContent
           }
-          getContentFn.call(this, fullPath).then(
-            function (moduleContent) {
+          getContentFn.call(this, fullPath, fileContent).then(
+            function (fileContent) {
               processedSuccessFulFileNum++
               loadedFilesContent[fullPath].loadedFileInfo =
                 {
                   fullPath: fullPath,
                   isSuccess: true,
-                  content: moduleContent
+                  content: fileContent
                 }
             },
             function (errorInfo) {
@@ -838,7 +884,7 @@
             function (fileInfo, index) {
               var loadResourceFn
               logger.debug(
-                'Load module content through file fullPath:' + fileInfo.fullPath
+                'Load file content through the file fullPath:' + fileInfo.fullPath
               )
               loadedFilesContent[fileInfo.fullPath] = {
                 order: index,
@@ -1051,9 +1097,9 @@
                 function (libInfo) {
                   // getting library loading info
                   var loadedLibInfo = me.loadedLibs[libInfo.fullPath]
-                  if (!_.isNull(loadedLibInfo)) {
+                  if (!_.isEmpty(loadedLibInfo)) {
                     if (loadedLibInfo.status === LIB_LOADING_STATUS.COMPLETED) {
-                      loadingLibs.push(loadedLibInfo)
+                      loadingLibs.push(Q(loadedLibInfo))
                     } else {
                       loadingLibs.push(loadedLibInfo.promise)
                     }
@@ -1122,10 +1168,10 @@
                       var moduleLoading = me.loadingModules[modulePath]
                       // try to get the module from the previously already loaded modules
                       var loadedModule = me.getModule(modulePath)
-                      if (!_.isNull(loadedModule)) {
+                      if (!_.isEmpty(loadedModule)) {
                         // if the module has been loaded before, then just put into
                         // loadingModules
-                        loadingModules.push(loadedModule)
+                        loadingModules.push(Q(loadedModule))
                       } else if (
                         moduleLoading &&
                         (
@@ -1357,13 +1403,22 @@
             init: function () {
               var me = this
               var bootModules, extModules
+              var bootLibs, extLibs, appLibs
               var bootContext, extContext
 
               bootContext = XModuleContext.newInstance(MODULE_TYPE.BOOT_MODULE)
               extContext = XModuleContext.newInstance(bootContext, MODULE_TYPE.EXT_MODULE)
               bootContext.init()
               extContext.init()
+
               return Q.when(loadDefaultConfiguration()).then(
+                function () {
+                  bootLibs = me.getConfigValue('bootLibs')
+                  if (!_.isUndefined(bootLibs)) {
+                    return XModuleContext.loadContextLibs(bootContext, bootLibs)
+                  }
+                }
+              ).then(
                 function () {
                   bootModules = me.getConfigValue('bootModules')
                   if (!_.isUndefined(bootModules)) {
@@ -1403,7 +1458,6 @@
       root.getRootVM = function () {
         return rootVM
       }
-
       rootVM = XVM.newInstance()
     }
 
