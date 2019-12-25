@@ -66,14 +66,17 @@
           addCall: function (callInfo) {
             __runtime.callTrace.push(callInfo)
           },
+          clearTrace: function () {
+            this.callTrace = []
+          },
           isPROD: function () {
             return runningModel === RUNNING_MODE.PROD
           },
           isDEV: function () {
-            return runningModel === RUNNING_MODE.PROD
+            return runningModel === RUNNING_MODE.DEV
           },
           isDEBUG: function () {
-            return runningModel === RUNNING_MODE.PROD
+            return runningModel === RUNNING_MODE.DEBUG
           }
         }
       }
