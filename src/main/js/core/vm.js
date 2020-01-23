@@ -82,14 +82,55 @@
           .toArray()
         },
         localizeContextLibCodes: function (contextId, libPath, url) {
+          var me = this
           var defer = Q.defer()
+          var libId = _x.util.generateUUID()
+          var libCodes
           logger.debug('Localizing the resource [' + libPath + '@' + contextId + '] from remote URL ' + url)
           WebResourceUtil.loadTextResource(
             url,
             function (codes) {
+              libCodes = codes
               systemDB.libCodes.put(
                 {
-                  libId: _x.util.generateUUID(),
+                  libId: libId,
+                  contextId: contextId,
+                  libPath: libPath,
+                  content: codes
+                }
+              ).then(
+                function () {
+                  return me.localizeContextLibMetaCodes(contextId, libPath, url)
+                }
+              ).then(
+                function () {
+                  defer.resolve(libCodes)
+                }
+              )
+            },
+            function (error) {
+              console.log(
+                'Failed to read remote library codes ' +
+                libPath + 'from url' +
+                url + ' for context ' + contextId +
+                ' because :' + error
+              )
+              defer.reject(error)
+            }
+          )
+          return defer.promise
+        },
+        localizeContextLibMetaCodes: function (contextId, libPath, url) {
+          var defer = Q.defer()
+          var libMetaId = _x.util.generateUUID()
+          url = _.replace(url, '.xlib', '.xmeta')
+          logger.debug('Localizing the resource meta [' + libPath + '@' + contextId + '] from remote URL ' + url)
+          WebResourceUtil.loadTextResource(
+            url,
+            function (codes) {
+              systemDB.libMetaCodes.put(
+                {
+                  libMetaId: libMetaId,
                   contextId: contextId,
                   libPath: libPath,
                   content: codes
@@ -102,19 +143,22 @@
             },
             function (error) {
               console.log(
-                'Failed to read remote library ' +
+                'Failed to read remote library meta data' +
                 libPath + 'from url' +
                 url + ' for context ' + contextId +
                 ' because :' + error
               )
-              defer.reject()
-              throw new Error(error)
+              defer.reject(error)
             }
           )
-          return defer.promise
         },
         getContextLibCodes: function (contextId, libPath) {
           return systemDB.libCodes
+          .where('[contextId+libPath]').equals([contextId, libPath])
+          .toArray()
+        },
+        getContextLibMetaCodes: function (contextId, libPath) {
+          return systemDB.libMetaCodes
           .where('[contextId+libPath]').equals([contextId, libPath])
           .toArray()
         }
@@ -153,7 +197,8 @@
         systemDB.version(1).stores(
           {
             moduleCodes: 'moduleId,[contextId+modulePath]',
-            libCodes: 'libId,[contextId+libPath]'
+            libCodes: 'libId,[contextId+libPath]',
+            libMetaCodes: 'libMetaId,[contextId+libPath]'
           }
         )
         systemDB.on(
@@ -268,6 +313,11 @@
                 return XModule.defineModule({}, content)
               }
             ],
+            /**
+             * @param requestId
+             * @param metaInfo
+             * @param factoryFn
+             */
             exportModule: function (requestId, metaInfo, factoryFn) {
               moduleParsedModules[requestId] = {
                 metaInfo: metaInfo,
@@ -454,7 +504,7 @@
        * it will firstly try to load the module codes from indexDB
        * if not available, it calls localizeModuleResources method to
        * localize the resource, once it is localized, it will return
-       * the codes back
+       * the module or lib content back
        *
        * @memberOf XModuleContext
        * @private
@@ -463,7 +513,7 @@
        *
        * @param loadingFileInfo
        * @param fileType FILE_TYPE
-       * @return {Promise<Object>}
+       * @return {Promise.<Object>}
        */
       function loadFile (loadingFileInfo, fileType) {
         var me = this
@@ -663,7 +713,7 @@
        * [
        *   {
        *     fullPath: boot:1.0
-       *     fileType: FILE_TYPE.MODULE
+       *     fileType: FILE_TYPE.LIB
        *   }
        * ]
        * @returns {Promise.<Array.<Object>>} - promise with the list of loadedFileContent in array
@@ -673,6 +723,11 @@
        *   isSuccess: false,
        *   errors: errorInfo
        *   content : content
+       * }
+       * when the file type is library, the attribute "content" will be the list of the module info
+       * {
+       *   fullPath: fullPath
+       *   content: module content
        * }
        * progress of promise: TODO
        */
@@ -688,87 +743,6 @@
         var processedFailedFileNum = 0
         var isReturned = false
 
-        function getModuleContentByRunningSourceCodes (fullPath) {
-          var oScript
-          var deferred = Q.defer()
-          var checkerNum = 0
-          oScript = document.createElement('script')
-          oScript.type = 'text/javascript'
-          oScript.src = '/xwebjs_module/' + me.contextId + '/' + fullPath
-          var checker = setInterval(function () {
-            var requestId = 'xwebjs.' + me.contextId + '.' + _.replace(fullPath, '/', '.')
-            if (moduleParsedModules[requestId]) {
-              if (
-                _.isObject(moduleParsedModules[requestId].metaInfo) &&
-                _.isFunction(moduleParsedModules[requestId].factoryFn)
-              ) {
-                deferred.resolve(moduleParsedModules[requestId])
-                moduleParsedModules[requestId] = null
-              } else {
-                deferred.reject('Invalid module meta or factory function')
-              }
-              clearInterval(checker)
-            } else {
-              if (checkerNum > 1000) {
-                logger.error(
-                  'Unexpected timeout on getting module content from export function')
-                clearInterval(checker)
-              } else {
-                checkerNum++
-              }
-            }
-          }, 1)
-          document.head.appendChild(oScript)
-          return deferred.promise
-        }
-
-        function getLibContentBySplittingSourceCodes (fileContent) {
-          var HEADER_PREFIX = '[======================='
-          var HEADER_SUFFIX = '=======================]'
-          var moduleContents = []
-          var moduleContent = {
-            metaInfo: null,
-            content: null
-          }
-          var sections = _.split(fileContent, HEADER_PREFIX)
-          _.forEach(sections,
-            function (section, index) {
-              if (_.includes(section, HEADER_SUFFIX)) {
-                var sectionInfo = _.split(section, HEADER_SUFFIX)
-                moduleContent.metaInfo = getSectionMetaInfo(sectionInfo[0])
-                moduleContent.content = sectionInfo[1]
-                moduleContents.push(moduleContent)
-              }
-            }
-          )
-          return moduleContents
-        }
-
-        function getSectionMetaInfo (sectionInfo
-        ) {
-          var pattern = /p#(.*);m#([\w]+)/
-          var info = pattern.exec(sectionInfo)
-          return {
-            package: info[1],
-            moduleName: info[2],
-            fullPath: (function () {
-              if (_.isEmpty(info[1])) {
-                return info[2]
-              } else {
-                return info[1] + '.' + info[2]
-              }
-            })()
-          }
-        }
-
-        function getLibContent (fullPath, fileContent) {
-          return Q.Promise(function (resolve) {
-            resolve(
-              getLibContentBySplittingSourceCodes(fileContent)
-            )
-          })
-        }
-
         function onFileLoadCompleted (fileInfo, fileContent) {
           var fullPath = fileInfo.fullPath
           var getContentFn
@@ -776,7 +750,7 @@
           if (fileInfo.fileType === FILE_TYPE.MODULE) {
             getContentFn = getModuleContentByRunningSourceCodes
           } else {
-            getContentFn = getLibContent
+            getContentFn = getLibModulesContent
           }
           getContentFn.call(this, fullPath, fileContent).then(
             function (fileContent) {
@@ -819,6 +793,140 @@
 
         function onFileLoadProgress (fileInfo, progress) {
           //todo
+        }
+
+        /**
+         *
+         * @param fullPath
+         * @return {Array.<Object>} moduleContents
+         * @example
+         * [{
+         *   fullPath:'ui.circle',
+         *   content: {....}
+         * }]
+         */
+        function getLibModulesContent (fullPath) {
+          return Q.Promise(function (resolve) {
+            getLibMetaContent(fullPath).then(
+              function (libMeta) {
+                getLibContentByRunningSourceCodes(
+                  fullPath,
+                  libMeta,
+                  function (loadedModules) {
+                    /**
+                     * todo
+                     */
+                  },
+                  function () {
+                  }
+                )
+              }
+            )
+          })
+        }
+
+        function getLibMetaContent (fullPath) {
+          return Q.Promise(function (resolve, reject, notify) {
+            DBUtil.getContextLibMetaCodes(me.contextId, fullPath)
+            .then(
+              function (records) {
+                if (records.length > 0) {
+                  resolve(records[0].content)
+                } else {
+                  throw new Error('Failed to load lib meta data because of unknown issue')
+                }
+              }
+            ).catch(
+              function (error) {
+                throw new Error('Failed to load lib meta data because :' + error)
+              }
+            )
+          })
+        }
+
+        function getLibContentByRunningSourceCodes (fullPath, libMeta, onCompleted, onTimeout) {
+          var oScript
+          var deferred = Q.defer()
+          var checkerNum = 0
+          oScript = document.createElement('script')
+          oScript.type = 'text/javascript'
+          oScript.src = '/xwebjs_lib/' + me.contextId + '/' + fullPath
+          var checker = setInterval(function () {
+            var loadedModules = {}
+            _.forEach(libMeta.modules,
+              function (module, index) {
+                if (checkModuleLoadingCompletion(module.fullPath)) {
+                  loadedModules[module.fullPath] = module.content
+                }
+              }
+            )
+            if (libMeta.modules.length === loadedModules.length) {
+              onCompleted(loadedModules)
+            }
+          }, 1)
+          document.head.appendChild(oScript)
+          return deferred.promise
+        }
+
+        function getModuleContentByRunningSourceCodes (fullPath) {
+          var oScript
+          var deferred = Q.defer()
+          var checkerNum = 0
+          oScript = document.createElement('script')
+          oScript.type = 'text/javascript'
+          oScript.src = '/xwebjs_module/' + me.contextId + '/' + fullPath
+          var checker = setInterval(function () {
+            var requestId = 'xwebjs.' + me.contextId + '.' + _.replace(fullPath, '/', '.')
+            if (moduleParsedModules[requestId]) {
+              if (
+                _.isObject(moduleParsedModules[requestId].metaInfo) &&
+                _.isFunction(moduleParsedModules[requestId].factoryFn)
+              ) {
+                deferred.resolve(moduleParsedModules[requestId])
+                delete moduleParsedModules[requestId]
+              } else {
+                deferred.reject('Invalid module meta or factory function')
+              }
+              clearInterval(checker)
+            } else {
+              if (checkerNum > 1000) {
+                logger.error(
+                  'Unexpected timeout on getting module content from export function')
+                clearInterval(checker)
+              } else {
+                checkerNum++
+              }
+            }
+          }, 1)
+          document.head.appendChild(oScript)
+          return deferred.promise
+        }
+
+        function checkModuleLoadingCompletion (modulePath) {
+          var requestId = 'xwebjs.' + me.contextId + '.' + _.replace(modulePath, '/', '.')
+          var moduleContent
+          if (moduleParsedModules[requestId]) {
+            if (
+              _.isObject(moduleParsedModules[requestId].metaInfo) &&
+              _.isFunction(moduleParsedModules[requestId].factoryFn)
+            ) {
+              moduleContent = moduleParsedModules[requestId]
+              delete moduleParsedModules[requestId]
+              return {
+                content: moduleContent,
+                status: 0
+              }
+            } else {
+              return {
+                error: 'Invalid module meta or factory function',
+                status: 2
+              }
+            }
+          } else {
+            return {
+              status: false
+            }
+          }
         }
 
         function prepareReturnData () {
@@ -1537,7 +1645,6 @@
         , XModuleContext
       )
 
-      // mount API to test_1
       root.createProgram = function () {
         return XProgram.createProgramInstance.call(arguments)
       }

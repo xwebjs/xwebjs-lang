@@ -159,7 +159,6 @@ function generateFileCode (request, fileType) {
   )
 }
 
-
 function getContextModuleCodes (contextId, modulePath) {
   return Q.promise(
     function (resolve, reject, notify) {

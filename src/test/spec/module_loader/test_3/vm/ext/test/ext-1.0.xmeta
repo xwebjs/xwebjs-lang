@@ -1,1 +1,1 @@
-{"modules":[{"pack":"","module":"Ext"},{"pack":"common","module":"MagicCollection"}],"moduleNum":2,"fileSize":365,"groupId":"test","artifactId":"ext","version":"1.0"}
+{"modules":[{"pack":"","module":"Ext","fullPath":"Ext"},{"pack":"common","module":"MagicCollection","fullPath":"common.MagicCollection"}],"moduleNum":0,"fileSize":330,"groupId":"test","artifactId":"ext","version":"1.0"}

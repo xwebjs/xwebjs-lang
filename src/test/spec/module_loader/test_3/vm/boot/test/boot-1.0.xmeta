@@ -1,1 +1,1 @@
-{"modules":[{"pack":"","module":"Core"},{"pack":"common","module":"Collection"}],"moduleNum":2,"fileSize":391,"groupId":"test","artifactId":"boot","version":"1.0"}
+{"modules":[{"pack":"common","module":"Collection","fullPath":"common.Collection"},{"pack":"","module":"Core","fullPath":"Core"}],"moduleNum":0,"fileSize":352,"groupId":"test","artifactId":"boot","version":"1.0"}

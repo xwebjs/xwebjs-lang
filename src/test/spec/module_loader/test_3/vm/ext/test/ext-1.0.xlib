@@ -1,5 +1,5 @@
 
-[=======================p#;m#Ext=======================]
-_x.exportModule({imports:[]},function(){return _x.createCls({props:{status:0},methods:{init:function(){this.status=1}}})});
-[=======================p#common;m#MagicCollection=======================]
-_x.exportModule({imports:[]},function(){return _x.createCls({methods:{magicSize:function(){return 1e3}}})});
+//@moduleInfo(p#;m#Ext)
+_x.exportModule("Ext",{imports:[]},function(){return _x.createCls({props:{status:0},methods:{init:function(){this.status=1}}})});
+//@moduleInfo(p#common;m#MagicCollection)
+_x.exportModule("common.MagicCollection",{imports:[]},function(){return _x.createCls({methods:{magicSize:function(){return 1e3}}})});

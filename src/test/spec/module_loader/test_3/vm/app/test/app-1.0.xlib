@@ -1,9 +1,11 @@
 
-[=======================p#a;m#A=======================]
-_x.exportModule({imports:[]},function(){return _x.createCls({construct:function(){},staticProps:{},props:{},staticMethods:{},methods:{}})});
-[=======================p#b;m#B=======================]
-_x.exportModule({imports:[]},function(){return _x.createCls({construct:function(){},staticProps:{},props:{},staticMethods:{},methods:{}})});
-[=======================p#b.c;m#C=======================]
-_x.exportModule({imports:[]},function(){return _x.createCls({construct:function(){},staticProps:{},props:{},staticMethods:{},methods:{}})});
-[=======================p#b.c;m#D=======================]
-_x.exportModule({imports:[]},function(){return _x.createCls({construct:function(){},staticProps:{},props:{},staticMethods:{},methods:{}})});
+//@moduleInfo(p#ui;m#Shape)
+_x.exportModule("ui.Shape",{imports:[]},function(){return _x.createCls({props:{isShapeInit:!1},methods:{drawShape:function(){console.log("draw shape"),this.isShapeInit=!0}}})});
+//@moduleInfo(p#ui.features;m#Drawable)
+_x.exportModule("ui.features.Drawable",{imports:[]},function(){return _x.createIf({methods:{draw:function(){}}})});
+//@moduleInfo(p#ui.pen;m#Circle)
+_x.exportModule("ui.pen.Circle",{imports:["ui.Shape","ui.features.Drawable"]},function(e,i){return _x.createCls({implements:e,props:{isLineInit:!1},methods:{draw:function(){},drawCircle:function(){console.log("draw circle"),this.isShapeInit=!0}}},i)});
+//@moduleInfo(p#ui.pen;m#Line)
+_x.exportModule("ui.pen.Line",{imports:["ui.Shape","ui.features.Drawable"]},function(e,i){return _x.createCls({implements:e,props:{isLineInit:!1},methods:{draw:function(){},drawLine:function(){console.log("draw line"),this.isShapeInit=!0}}},i)});
+//@moduleInfo(p#ui.common;m#Collection)
+_x.exportModule("ui.common.Collection",{imports:[]},function(){return _x.createCls({methods:{size:function(){return 200}}})});
