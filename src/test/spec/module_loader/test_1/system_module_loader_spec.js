@@ -21,7 +21,7 @@ describe('System module loader', function () {
   beforeEach(function () {
     // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
-    jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 15000
   })
   xit('Load program modules from web server', function (done) {
     enableCache().then(

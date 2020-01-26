@@ -23,6 +23,11 @@ module.exports = function (config) {
             nocache: true
           },
           {
+            pattern: projectFiles.corePath.testSource + '/spec/module_loader/**/*.xmeta',
+            included: false,
+            nocache: true
+          },
+          {
             pattern: projectFiles.corePath.targetJs + 'boot/**.js',
             included: false,
             nocache: true

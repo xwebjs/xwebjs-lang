@@ -27,16 +27,16 @@ if (!enableCoreFileCache) {
 }
 
 function enableDB () {
-  var defer = Q.defer()
   try {
     systemDB = new Dexie('xwebjs_system')
     systemDB.version(1).stores(
       {
-        moduleCodes: 'moduleId,[contextId+modulePath]'
+        moduleCodes: 'moduleId,[contextId+modulePath]',
+        libCodes: 'libId,[contextId+libPath]',
+        libMetaCodes: 'libMetaId,[contextId+libPath]'
       }
     )
-    systemDB.open()
-    return defer.promise
+    return systemDB.open()
   } catch (error) {
     console.error('Failed to setup the system index DB because:' + error.oetMessage())
   }
@@ -79,7 +79,7 @@ self.addEventListener('fetch', function (event) {
           if (event.request.url.indexOf('/xwebjs_module') !== -1) {
             console.log('Fetching module content from index DB:' + event.request.url)
             return generateFileCode(event.request, FIlE_TYPE.MODULE)
-          } else if (event.request.url.indexOf('/xwebjs_libs') !== -1) {
+          } else if (event.request.url.indexOf('/xwebjs_lib') !== -1) {
             console.log('Fetching library content from index DB:' + event.request.url)
             return generateFileCode(event.request, FIlE_TYPE.LIB)
           } else {
@@ -131,16 +131,12 @@ function generateFileCode (request, fileType) {
       throw new Error('Invalid module file content')
     }
   }
+
   function parseLibFileContent (codes) {
-    var prefix = '_x.exportModule('
-    var fCodes
     codes = codes[0].content
-    if (codes.substr(0, prefix.length) === prefix) {
-      fCodes = prefix + '\'' + requestId + '\',' + codes.slice(prefix.length)
-      return new Response(fCodes)
-    } else {
-      throw new Error('Invalid lib file content')
-    }
+    return new Response(codes.replace(
+      /_x\.exportModule\("/g, '_x.exportModule("' + contextId + '.' + filePath + '\.')
+    )
   }
 
   return getFileFn.call(this, contextId, filePath).then(
@@ -173,17 +169,14 @@ function getContextModuleCodes (contextId, modulePath) {
     }
   )
 }
+
 function getContextLibraryCodes (contextId, libPath) {
-  return Q.promise(
-    function (resolve, reject, notify) {
-      systemDB.on(
-        'ready',
-        function () {
-          resolve(systemDB.moduleCodes
-          .where('[contextId+libPath]').equals([contextId, libPath])
-          .toArray())
-        }
-      )
-    }
-  )
+  return Q.Promise(function (resolve, reject, notify) {
+    systemDB.open().then(
+      function (db) {
+        resolve(db.libCodes.where('[contextId+libPath]').equals([contextId, libPath])
+        .toArray())
+      }
+    )
+  })
 }

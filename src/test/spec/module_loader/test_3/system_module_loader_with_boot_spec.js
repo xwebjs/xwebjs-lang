@@ -2,7 +2,7 @@ describe('System module loader', function () {
   beforeEach(function () {
     // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
-    jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 100000
   })
   it('Load boot module library from web server', function (done) {
     _x.initVM().then(

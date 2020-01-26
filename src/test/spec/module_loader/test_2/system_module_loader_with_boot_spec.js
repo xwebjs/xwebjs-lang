@@ -17,14 +17,30 @@ describe('System module loader', function () {
       )
     }
   }
-
+  function clearDB () {
+    return Q.Promise(function (resolve, reject) {
+      // var DBDeleteRequest = window.indexedDB.deleteDatabase('xwebjs_system')
+      // DBDeleteRequest.onerror = function (event) {
+      //   reject('Error deleting database')
+      // }
+      // DBDeleteRequest.onsuccess = function (event) {
+      //   resolve()
+      // }
+      resolve()
+    })
+  }
   beforeEach(function () {
     // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
   xit('Load vm boot modules from web server', function (done) {
-    enableCache().then(
+    clearDB().then(
+      enableCache,
+      function (reason) {
+        console.log('Failed to clear DB because:' + reason)
+      }
+    ).then(
       function () {
         _x.initVM().then(
           function () {
