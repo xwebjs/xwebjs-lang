@@ -2,7 +2,7 @@ describe('System module loader', function () {
   beforeEach(function () {
     // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
-    jasmine.DEFAULT_TIMEOUT_INTERVAL = 100000
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
   it('Load boot module library from web server', function (done) {
     _x.initVM().then(
@@ -15,12 +15,6 @@ describe('System module loader', function () {
               bootLibPath: '/test3/vm/boot',
               extLibPath: '/test3/vm/ext'
             },
-            bootModules: [
-              'Core'
-            ],
-            extModules: [
-              'Ext', 'common.MagicCollection'
-            ],
             bootLibs: [
               'test.boot:1.0'
             ],

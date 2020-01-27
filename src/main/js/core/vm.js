@@ -461,10 +461,27 @@
          */
         loadFile.call(me, loadingLibInfo, FILE_TYPE.LIB).then(
           function (loadingLibInfo) {
-            console.log(loadingLibInfo)
-            // todo
-            // add module registration step
-            deferred.resolve()
+            var promiseFn = Q()
+            _.forEach(
+              _.keys(loadingLibInfo.rawContent),
+              function (modulePath) {
+                promiseFn = promiseFn.then(
+                  function () {
+                    return parseModuleContent.call(me,
+                      {
+                        rawContent: loadingLibInfo.rawContent[modulePath],
+                        fullPath: modulePath
+                      }
+                    )
+                  }
+                )
+              }
+            )
+            promiseFn.then(
+              function () {
+                deferred.resolve()
+              }
+            )
           }
         )
         return deferred.promise
