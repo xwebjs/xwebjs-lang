@@ -25,7 +25,7 @@ describe('System module loader', function () {
           mainProgramInfo: {
             loader: {
               basePath: '/test3/program',
-              baseLibPath: '/test3/program'
+              baseLibPath: '/test3/program/libs'
             },
             appLibs: [
               'test.app:1.0'

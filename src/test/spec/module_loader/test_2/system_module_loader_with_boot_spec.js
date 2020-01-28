@@ -34,7 +34,7 @@ describe('System module loader', function () {
     jasmine.addMatchers(objectMatcher)
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
-  xit('Load vm boot modules from web server', function (done) {
+  it('Load vm boot modules from web server', function (done) {
     clearDB().then(
       enableCache,
       function (reason) {

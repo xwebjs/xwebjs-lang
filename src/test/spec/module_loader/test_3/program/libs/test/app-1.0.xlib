@@ -1,0 +1,13 @@
+
+//@moduleInfo(p#ui;m#Shape)
+_x.exportModule("ui.Shape",{imports:[]},function(){return _x.createCls({props:{isShapeInit:!1},methods:{drawShape:function(){console.log("draw shape"),this.isShapeInit=!0}}})});
+//@moduleInfo(p#ui.features;m#Drawable)
+_x.exportModule("ui.features.Drawable",{imports:[]},function(){return _x.createIf({methods:{draw:function(){}}})});
+//@moduleInfo(p#ui.pen;m#Line)
+_x.exportModule("ui.pen.Line",{imports:["ui.Shape","ui.features.Drawable"]},function(Drawable,Shape){return _x.createCls({implements:Drawable,props:{isLineInit:!1},methods:{draw:function(){},drawLine:function(){console.log("draw line"),this.isShapeInit=!0}}},Shape)});
+//@moduleInfo(p#ui.pen;m#Circle)
+_x.exportModule("ui.pen.Circle",{imports:["ui.Shape","ui.features.Drawable"]},function(Drawable,Shape){return _x.createCls({implements:Drawable,props:{isLineInit:!1},methods:{draw:function(){},drawCircle:function(){console.log("draw circle"),this.isShapeInit=!0}}},Shape)});
+//@moduleInfo(p#;m#MainProgram)
+_x.exportModule("MainProgram",{imports:["ui.pen.Line","ui.pen.Circle","common.Collection","common.MagicCollection"]},function(Line,Circle,Collection,MagicCollection){return _x.createCls({props:{something:"something for testing",line:null},staticProps:{status:"",collection:new Collection},staticMethods:{main:function(){console.log("main function is called");var line=new Line,circle=new Circle;line.drawLine(),line.drawShape(),circle.drawCircle(),this.$.status="done"},getCollectionSize:function(){return this.$.collection.size()}},methods:{doSomething:function(){},getSomething:function(){return this.something}}})});
+//@moduleInfo(p#ui.common;m#Collection)
+_x.exportModule("ui.common.Collection",{imports:[]},function(){return _x.createCls({methods:{size:function(){return 200}}})});

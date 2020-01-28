@@ -2,4 +2,4 @@
 //@moduleInfo(p#common;m#Collection)
 _x.exportModule("common.Collection",{imports:[]},function(){return _x.createCls({methods:{size:function(){return 100}}})});
 //@moduleInfo(p#;m#Core)
-_x.exportModule("Core",{imports:["common.Collection"]},function(t){return _x.createCls({props:{status:0},methods:{init:function(){(new t).size(),this.status=1}}})});
+_x.exportModule("Core",{imports:["common.Collection"]},function(Collection){return _x.createCls({props:{status:0},methods:{init:function(){(new Collection).size(),this.status=1}}})});

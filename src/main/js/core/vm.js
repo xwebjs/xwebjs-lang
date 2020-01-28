@@ -617,7 +617,7 @@
             logger.error(
               'Failed to parse the module content [' +
               loadingModuleInfo.fullPath +
-              '] because ' + error)
+              '] because: ' + error)
             throw new Error(
               'Fail to parse the module module [' +
               loadingModuleInfo.fullPath +
@@ -713,7 +713,7 @@
             if (moduleLoadingType === FILE_TYPE.MODULE) {
               path = this.getConfigValue('loader.basePath')
             } else {
-              path = rootVM.getConfigValue('loader.baseLibPath')
+              path = this.getConfigValue('loader.baseLibPath')
             }
             break
         }
@@ -1515,6 +1515,8 @@
               extContext = XModuleContext.newInstance(bootContext, MODULE_TYPE.EXT_MODULE)
               bootContext.init()
               extContext.init()
+              me.$.bootContext = bootContext
+              me.$.extContext = extContext
 
               return Q.when(loadDefaultConfiguration()).then(
                 function () {
@@ -1534,7 +1536,13 @@
                 }
               ).then(
                 function () {
-                  me.$.bootContext = bootContext
+                  extLibs = me.getConfigValue('extLibs')
+                  if (!_.isUndefined(extLibs)) {
+                    return XModuleContext.loadContextLibs(extContext, extLibs)
+                  }
+                }
+              ).then(
+                function () {
                   extModules = me.getConfigValue('extModules')
                   if (!_.isUndefined(extModules)) {
                     return XModuleContext.loadContextModules(
@@ -1544,7 +1552,6 @@
                 }
               ).then(
                 function () {
-                  me.$.extContext = extContext
                   return startDefaultProgram.call(me)
                 }
               ).catch(
@@ -1628,8 +1635,20 @@
             },
             initProgramContext: function () {
               var me = this
-              return me.loadModules(
-                _x.util.asArray(me.configuration.entryClassName))
+              return Q().then(
+                function () {
+                  if (!_.isEmpty(me.getConfigValue('appLibs'))) {
+                    return me.loadLibs(
+                      me.getConfigValue('appLibs')
+                    )
+                  }
+                }
+              ).then(
+                function () {
+                  return me.loadModules(
+                    _x.util.asArray(me.configuration.entryClassName))
+                }
+              )
             },
             start: function () {
               return this.mProgramClass.main()
