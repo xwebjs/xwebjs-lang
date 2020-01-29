@@ -1,5 +1,4 @@
-[![<xwebjs>](https://circleci.com/gh/xwebjs-lang/tree/development.svg?style=svg)](https://circleci.com/gh/xwebjs-lang/tree/development)
-
+[![<xwebjs>](https://circleci.com/gh/xwebjs/xwebjs-lang/tree/development.svg?style=svg)](https://circleci.com/gh/xwebjs/xwebjs-lang/tree/development)
 # XWebJS Design Specification
 ## 1. Requirement
 ### 1.1 Motivation
