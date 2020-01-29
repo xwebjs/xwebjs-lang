@@ -4,7 +4,7 @@
   "description": "JavaScript library for supporting OO programming language features",
   "main": "xwebjs-lang.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "karma start ./src/test/karma-module-loader.conf.js",
     "generate-docs": "node_modules/.bin/jsdoc -c jsdoc.json"
   },
   "repository": {
