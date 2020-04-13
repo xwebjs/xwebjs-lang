@@ -454,11 +454,6 @@
           type: FILE_TYPE.LIB
         }
         me.loadedLibs[libInfo.fullPath] = loadingLibInfo
-        /**
-         * todo
-         * step 1: load file & get file content
-         * step 2: call parseModuleContent method
-         */
         loadFile.call(me, loadingLibInfo, FILE_TYPE.LIB).then(
           function (loadingLibInfo) {
             var promiseFn = Q()

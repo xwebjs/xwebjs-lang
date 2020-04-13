@@ -1,5 +1,6 @@
 {
-  "groupId": "com.xwebjs",
+  "nameSpace": "com.xwebjs",
+  "category": "",
   "packageId": "xwebjs-lang",
   "version": "1.0-SNAPSHOT",
   "package": {
