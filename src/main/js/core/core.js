@@ -6,7 +6,7 @@
     var configuration = {}
     var metaExtractFunction
     var classMetaExtractionRule, ifMetaExtractionRule, structureExtractionRule
-    var XObject, XFace, XStructure
+    var XObject, XFace, XStructure, XAnnotation
     var commonUtil, methodUtil, annotationUtil, logger
     var withAnnotationCapabilities
     var exportedUtil = {}
@@ -729,6 +729,10 @@
         // eslint-disable-next-line lodash/prefer-noop
         XStructure = function () {}
       }
+      var initXAnnotation = function () {
+        // eslint-disable-next-line lodash/prefer-noop
+        XAnnotation = function () {}
+      }
       var initXFace = function () {
         function getMethods (face) {
           var methods = []
@@ -784,6 +788,7 @@
       initXObject()
       initXFace()
       initXStructure()
+      initXAnnotation()
 
       initConfiguration()
       prepareExtractionFunction()
@@ -1476,9 +1481,10 @@
               metaProperties[prop.name] = prop
             }
           )
-          Structure = function (properties) {
-            properties = _.isEmpty(properties) ? {} : properties
+          Structure = function (props) {
             var me = this
+            var properties = _.clone(props)
+            properties = _.isEmpty(properties) ? {} : properties
             _.forEach(cleanMetaInfo.props,
               function (prop) {
                 Object.defineProperty(me, prop.name, {
@@ -1513,7 +1519,6 @@
                 }
               }
             )
-
             return new Structure(properties)
           }
           Structure.getProperties = function () {
@@ -1527,11 +1532,64 @@
         return build(extractionResult.resultMetaInfo)
       }
       root.createAnnotation = function (metaInfo) {
-        var Annotation = root.createStructure(metaInfo)
-        Annotation.isStructureure = undefined
-        Annotation.isAnnotation = true
-        return Annotation
+        var extractionResult
+        var Annotation
+        var metaProperties = {}
+
+        function build (cleanMetaInfo) {
+          _.forEach(cleanMetaInfo.props,
+            function (prop) {
+              metaProperties[prop.name] = prop
+            }
+          )
+          Annotation = function (props) {
+            var me = this
+            var properties = _.clone(props)
+            properties = _.isEmpty(properties) ? {} : properties
+            _.forEach(cleanMetaInfo.props,
+              function (prop) {
+                Object.defineProperty(me, prop.name, {
+                  enumerable: true,
+                  configurable: false,
+                  get: function () {
+                    return _.get(properties, prop.name, prop.defaultValue)
+                  },
+                  set: function (v) {
+                    _.set(properties, prop.name, v)
+                  }
+                })
+              }
+            )
+          }
+          Annotation.prototype = _.create(XAnnotation)
+          Annotation.valueOf = function (properties) {
+            _.forEach(properties,
+              function (value, key) {
+                if (
+                  !_.find(
+                    cleanMetaInfo.props,
+                    ['name', key]
+                  )) {
+                  throw new Error(
+                    'the property name "' +
+                    key +
+                    '" is not valid property name in the structure')
+                }
+              }
+            )
+            return new Annotation(properties)
+          }
+          Annotation.getProperties = function () {
+            return metaProperties
+          }
+          Annotation.isAnnotation = true
+          return Annotation
+        }
+
+        extractionResult = metaExtractFunction(metaInfo, null, structureExtractionRule)
+        return build(extractionResult.resultMetaInfo)
       }
+
       root.isCustomClass = function (cls) {
         return cls && cls.isCustomClass
       }
