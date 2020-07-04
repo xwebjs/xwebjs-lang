@@ -1210,7 +1210,7 @@
               return (_.isObject(face) && face.isCustomIf)
             }
           )) {
-            throw Error('parent interface is not invalid')
+            throw Error('parent interface is invalid')
           }
           return ifs
         }
