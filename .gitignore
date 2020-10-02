@@ -4,3 +4,4 @@ target/
 dist/
 coverage/
 package-lock.json
+FileCacheSupport.js
