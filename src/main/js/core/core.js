@@ -1183,9 +1183,6 @@
             callInfo = _.assignIn(callInfo, { tagName: 'after' })
             context.__runtime.lastCallInfo = callInfo
           }
-          if (__runtime.isDEBUG()) {
-            __runtime.addCall(callInfo)
-          }
         }
       }
       root.createIf = function (metaInfo, pIfs) {
@@ -1250,6 +1247,7 @@
                 searchResult.method.methodFn, this, XClass)
             }
           }
+
           methodMap = {}
           _.forEach(MethodType, function (value) {
             methodMap[value] = {}
@@ -1395,6 +1393,7 @@
                 return _.assign(rawPropertyMeta, withAnnotationCapabilities(rawPropertyMeta))
               }
             },
+
             withAnnotationCapabilities(metaInfo)
           )
 
@@ -1406,16 +1405,20 @@
             XClass.apply(instance, arguments)
             return instance
           }
+
           // add tools set
           XClass.prototype.self = function () {
             return XClass
           }
+
           XClass.prototype.$ = XClass.prototype.self = function () {
             return XClass
           }
+
           XClass.prototype.getXClass = function () {
             return XClass.class
           }
+
           XClass.prototype._supportInterfaceOf = function (face) {
             function hasIf (cls) {
               if (!_.isEmpty(cls.class.implements)) {

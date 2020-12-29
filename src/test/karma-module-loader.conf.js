@@ -5,6 +5,8 @@ var sharedConfig = require('./karma-shared.conf')
 module.exports = function (config) {
   sharedConfig(config)
   config.set({
+    singleRun: false,
+    concurrency: Infinity,
     files:
       _.union(
         projectFiles.files.libFiles,

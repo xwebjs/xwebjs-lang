@@ -1,42 +1,14 @@
 describe('System module loader', function () {
-  function enableCache () {
-    if ('serviceWorker' in navigator) {
-      return navigator.serviceWorker.register(
-        '/CacheSupport.js',
-        {
-          scope: '/'
-        }
-      ).then(
-        function (registration) {
-          console.log('The file cache support service worker has been registered successfully')
-        }
-      ).catch(
-        function (reason) {
-          console.log('Failed to register the cache support:' + reason)
-        }
-      )
-    }
-  }
-  function clearDB () {
-    return Q.Promise(function (resolve, reject) {
-      // var DBDeleteRequest = window.indexedDB.deleteDatabase('xwebjs_system')
-      // DBDeleteRequest.onerror = function (event) {
-      //   reject('Error deleting database')
-      // }
-      // DBDeleteRequest.onsuccess = function (event) {
-      //   resolve()
-      // }
-      resolve()
-    })
-  }
-  beforeEach(function () {
+  beforeAll(function () {
     // eslint-disable-next-line no-undef
     jasmine.addMatchers(objectMatcher)
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
   })
-  it('Load vm boot modules from web server', function (done) {
-    clearDB().then(
-      enableCache,
+  it('Load vm modules from web server', function (done) {
+    // eslint-disable-next-line no-undef
+    commonUtil.clearDB('before test 2').then(
+      // eslint-disable-next-line no-undef
+      commonUtil.enableCache,
       function (reason) {
         console.log('Failed to clear DB because:' + reason)
       }
@@ -72,13 +44,13 @@ describe('System module loader', function () {
               function (mainAppClass) {
                 expect(mainAppClass.$.status === 'done').toBeTruthy()
                 expect(mainAppClass.getCollectionSize() === 100).toBeTruthy()
-                done()
               },
               function (errors) {
                 fail()
-                done()
               }
-            )
+            ).then(function () {
+              done()
+            })
           })
       }
     )

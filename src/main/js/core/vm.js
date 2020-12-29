@@ -223,7 +223,11 @@
             defer.resolve()
           }
         )
-        systemDB.open()
+        systemDB.open().then(
+          function (value) {
+            defer.resolve()
+          }
+        )
         return defer.promise
       } catch (error) {
         logger.error('Failed to setup the system index DB because:' + error.getMessage())
@@ -453,7 +457,7 @@
           promise: deferred.promise,
           type: FILE_TYPE.LIB
         }
-        me.loadedLibs[libInfo.fullPath] = loadingLibInfo
+        me.loadedLibs[loadingLibInfo.fullPath] = loadingLibInfo
         loadFile.call(me, loadingLibInfo, FILE_TYPE.LIB).then(
           function (loadingLibInfo) {
             var promiseFn = Q()
@@ -808,7 +812,7 @@
 
         function onFileLoadFail (fileInfo, errorInfo) {
           var fullPath = fileInfo.fullPath
-          logger.info('Failed to load remote file [' + fullPath + '] because:' + errorInfo)
+          logger.error('Failed to load remote file [' + fullPath + '] because:' + errorInfo)
           loadedFilesContent[fullPath] = {}
           processedFailedFileNum++
           loadedFilesContent[fullPath].loadedFileInfo =
@@ -1260,7 +1264,7 @@
                 function (mFilePaths) {
                   var me = this
                   // Used for storing the all modules information which can be promise or actual module instance
-                  // this information will be returned as part of the pipeline
+                  // this information will be returned as part of the loading pipeline
                   var loadingModules = []
                   _.forEach(mFilePaths,
                     function (modulePath) {
@@ -1269,7 +1273,7 @@
                       // try to get the module from the previously already loaded modules
                       var loadedModule = me.getModule(modulePath)
                       if (!_.isEmpty(loadedModule)) {
-                        // if the module has been loaded before, then just put into
+                        // if the module has been loaded before, then just put the one into
                         // loadingModules
                         loadingModules.push(Q(loadedModule))
                       } else if (
@@ -1281,7 +1285,7 @@
                           moduleLoading.status === MODULE_LOADING_STATUS.FAILED
                         )
                       ) {
-                        // if the requested modules which have been requested before
+                        // if the requested modules  which have been requested before
                         // then put the previous requested loading status promise into loadingModules
                         loadingModules.push(moduleLoading.promise)
                       } else {
@@ -1563,9 +1567,14 @@
 
       // mount API to the test_1
       root.getRootVM = function () {
+        if (_.isEmpty(rootVM)) {
+          root.resetVM()
+        }
         return rootVM
       }
-      rootVM = XVM.newInstance()
+      root.resetVM = function () {
+        rootVM = XVM.newInstance()
+      }
     }
 
     /**
@@ -1671,6 +1680,11 @@
       .then(enablePackage)
       .then(enableProgram)
       .then(enableVM)
+      .catch(
+        function (reason) {
+          throw Error('Failed to initializing the VM because:' + reason)
+        }
+      )
     }
 
     function postProcess () {
@@ -1688,8 +1702,17 @@
         return Q.when(initVM())
         .then(postProcess)
       } else {
-        return Q()
+        return Q().then(enableDB).catch(
+          function (error) {
+            logger.error('Failed to re-initializing the VM because:' + error)
+          }
+        )
       }
+    }
+
+    root.close = function () {
+      systemDB.close()
+      logger.info('vm has been closed')
     }
   }
 )()

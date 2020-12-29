@@ -88,3 +88,50 @@ var methodMetaMatchers = {
     }
   }
 }
+var commonUtil = {
+  enableCache: function () {
+    if ('serviceWorker' in navigator) {
+      return navigator.serviceWorker.register(
+        '/CacheSupport.js',
+        {
+          scope: '/'
+        }
+      ).then(
+        function (registration) {
+          console.log('The file cache support service worker has been registered successfully')
+        }
+      ).catch(
+        function (reason) {
+          console.log('Failed to register the cache support:' + reason)
+        }
+      )
+    }
+  },
+  clearDB: function (context) {
+    return Q.Promise(function (resolve, reject) {
+      resolve()
+      // eslint-disable-next-line no-undef
+      var systemDB = new Dexie('xwebjs_system')
+      systemDB.version(1).stores(
+        {
+          moduleCodes: 'moduleId,[contextId+modulePath]',
+          libCodes: 'libId,[contextId+libPath]',
+          libMetaCodes: 'libMetaId,[contextId+libPath]'
+        }
+      )
+      return systemDB.transaction('rw', systemDB.moduleCodes, function () {
+        systemDB.friends.clear()
+      }).then(
+        function (value) {
+          systemDB.transaction('rw', systemDB.libCodes, function () {
+            systemDB.libCodes.clear()
+          })
+        }).then(
+        function (value) {
+          systemDB.transaction('rw', systemDB.libMetaCodes, function () {
+            systemDB.libMetaCodes.clear()
+          })
+        })
+    })
+  }
+}

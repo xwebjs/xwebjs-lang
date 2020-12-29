@@ -17,7 +17,7 @@ _x.exportModule(
         },
         staticMethods: {
           main: function () {
-            console.log('main function is called')
+            console.log('main function 1 is called')
             var line = new Line()
             var circle = new Circle()
             line.drawLine()
