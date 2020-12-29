@@ -6,7 +6,7 @@ module.exports = function (config) {
   sharedConfig(config)
   config.set({
     singleRun: false,
-    concurrency: Infinity,
+    concurrency: 1,
     files:
       _.union(
         projectFiles.files.libFiles,
